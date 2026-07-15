@@ -1,0 +1,9 @@
+*.exe
+*.dll
+*.app
+*.dmg
+*.dylib
+*.so
+.DS_Store
+test.txt
+
