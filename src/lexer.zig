@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const TypeKind = enum {
     Int,
     Bool, //B is in Upper-case
@@ -90,3 +92,55 @@ pub const Token = struct {
     line: usize,
     column: usize,
 };
+pub const Lexer = struct {
+    source: []const u8,
+    current: usize,
+    line: usize,
+    column: usize,
+    pub fn create(source: []const u8) Lexer {
+        return .{
+            .source = source,
+            .current = 0,
+            .line = 1,
+            .column = 1,
+        };
+    }
+}; //current, line and colum reprsent the current state of the lexer
+
+fn peekNext(lexer: *Lexer) ?u8 {
+    if (lexer.current + 1 >= lexer.source.len) {
+        return null;
+    } else {
+        return (lexer.source[lexer.current + 1]);
+    }
+}
+
+fn isAtEnd(lexer: *Lexer) bool {
+    return (lexer.current >= lexer.source.len);
+}
+
+fn match(lexer: *Lexer, expected: u8) bool {
+    if (isAtEnd(lexer)) {
+        return false;
+    }
+    if (lexer.source[lexer.current] != expected) {
+        return false;
+    } else {
+        lexer.current += 1;
+        return true;
+    }
+}
+fn moveNext(lexer: *Lexer) ?u8 {
+    if (isAtEnd(lexer)) {
+        return null;
+    }
+    const c = lexer.source[lexer.current];
+    lexer.current += 1;
+    return c;
+}
+
+pub fn lex(lexer: *Lexer) void {
+    while (!isAtEnd(lexer)) {
+        //main lexing loop
+    }
+}
