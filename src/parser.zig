@@ -232,13 +232,27 @@ pub const Parser = struct {
         _ = self;
     }
     fn parseIfStatement(self: *Self) !*Stmt {
-        _ = self;
+        _ = try self.consume(.if_);
+        _ = try self.consume(.lparen);
+        const condition = try self.parseExpression();
+        _ = try self.consume(.rparen);
+
+        const if_branch = try self.parseBlock();//just parse the thing in {..}
+        //check for else
+        var else_branch: ?*Stmt = null;
+        if (getTag(self.peek()) == .else_) {
+            _ = try self.consume(.else_);
+            else_branch = try self.parseBlock();
+        }
+        return ast.makeIfStmt(self.allocator, condition, if_branch, else_branch);
+
+
     }
     fn parseWhileStatement(self: *Self) !*Stmt {
         _ = self;
     }
     fn parseReturnStatement(self: *Self) !*Stmt {
-        _ = self;
+        
     }
     fn parseFunctionCall(self: *Self) !*Expr {
         _ = self;
