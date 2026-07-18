@@ -15,6 +15,7 @@ const Literal = ast.Literal;
 //errors
 const parserErros = error{
     UnexpectedLiteral,
+    ExpectedAssignmentOperator,
 };
 
 //all parser declarations and implementation in this file
@@ -209,8 +210,24 @@ pub const Parser = struct {
         _ = self;
     }
     fn parseAssignment(self: *Self) !*Stmt {
-        _ = self;
+        const nameToken = try self.consume(.identifier);
+        const name = nameToken.payload.identifier;
+        var index: ?*Expr = null;
+        if (getTag(self.peek()) == .lbracket) {
+            _ = try self.consume(.lbracket);
+            index = try self.parseExpression();
+            _ = try self.consume(.rbracket);
+        }
+        const opToken = self.advance();
+        const op = getTag(opToken);
+        if (op != .equal and op != .plus_equal and op != .minus_equal) {
+            return error.ExpectedAssignmentOperator;
+        }
+        const value = try self.parseExpression();
+        _ = try self.consume(.semicolon);
+        return ast.makeAssignment(self.allocator, name, index, op, value);
     }
+
     fn parseCallStatement(self: *Self) !*Stmt {
         _ = self;
     }
