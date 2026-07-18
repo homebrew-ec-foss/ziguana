@@ -16,6 +16,7 @@ const Literal = ast.Literal;
 const parserErros = error{
     UnexpectedLiteral,
     ExpectedAssignmentOperator,
+    UnexpectedStatementStart,
 };
 
 //all parser declarations and implementation in this file
@@ -87,10 +88,31 @@ pub const Parser = struct {
         _ = self;
     }
     fn parseBlock(self: *Self) !*Stmt {
-        _ = self;
+        _ = try self.consume(.lbrace);
+        var stmts = std.ArrayList(Stmt).init(self.allocator);
+        while (getTag(self.peek()) != .rbrace and !self.isAtEnd()) {
+            const stmt = try self.parseStatement();
+            try stmts.append(stmt.*);
+        }
+        _ = try self.consume(.rbrace);
+        return ast.makeBlock(self.allocator, try stmts.toOwnedSlice());
     }
     fn parseStatement(self: *Self) !*Stmt {
-        _ = self;
+        return switch (getTag(self.peek())) {
+            .type_ => self.parseVarDecl(),
+            .if_ => self.parseIfStatement(),
+            .while_ => self.parseWhileStatement(),
+            .return_ => self.parseReturnStatement(),
+            .identifier => blk: {
+                const after = self.peekNext();
+                break :blk switch (getTag(after)) {
+                    .lparen => self.parseCallStatement(),
+                    .lbracket, .equal, .plus_equal, .minus_equal => self.parseAssignment(),
+                    else => error.UnexpectedToken,
+                };
+            },
+            else => error.UnexpectedStatementStart,
+        };
     }
     fn parseParameter(self: *Self) !Param {
         const typeToken = self.advance();
