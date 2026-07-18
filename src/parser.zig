@@ -47,14 +47,6 @@ pub const Parser = struct {
         return false;
     }
 
-    fn match(self: *Self, expectedTag: TokenTag) bool {
-        if (expectedTag == getTag(self.tokens[self.current])) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     fn previous(self: *Self) Token {
         return self.tokens[self.current - 1];
     }
@@ -73,6 +65,13 @@ pub const Parser = struct {
             return error.ExpectedToken;
 
         return self.advance();
+    }
+    fn peekNext(self: *Self) Token {
+        if (self.current + 1 >= self.tokens.len) {
+            return self.tokens[self.current];
+        }
+
+        return self.tokens[self.current + 1];
     }
 
     fn parseProgram(self: *Self) !*Stmt {
@@ -146,10 +145,38 @@ pub const Parser = struct {
         _ = self;
     }
     fn parseFactor(self: *Self) !*Expr {
-        _ = self;
+        var left = try self.parsePrimary();
+        while (getTag(self.peek()) == .star or getTag(self.peek()) == .slash or getTag(self.peek()) == .mod) {
+            const operator = self.advance();
+            const right = try self.parsePrimary();
+            left = try ast.makeBinary(self.allocator, operator, left, right);
+        }
+        return left;
     }
     fn parsePrimary(self: *Self) !*Expr {
-        _ = self;
+        var token = self.peek();
+        switch (getTag(token)) {
+            .number, .string, .true_, .false_ => {
+                return self.parseLiteral();
+            },
+            .identifier => {
+                if (getTag(self.peekNext()) == .lparen) {
+                    return self.parseFunctionCall();
+                }
+
+                token = self.advance();
+                return try ast.makeVariable(self.allocator, token.payload.identifier);
+            },
+            .lparen => {
+                _ = self.advance();
+                const expression = try self.parseExpression();
+                _ = try self.consume(.rparen);
+                return expression;
+            },
+            else => {
+                return error.expectedexpression;
+            },
+        }
     }
     fn parseVarDecl(self: *Self) !*Stmt {
         _ = self;
