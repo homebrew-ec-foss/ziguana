@@ -41,11 +41,16 @@ pub const Printer = struct {
                 try self.printIndent();
                 try self.printPrefix();
                 std.debug.print("Function {s} -> {s}\n", .{ func.name, typeName(func.return_type) });
-
                 self.addLevel();
-
+                if (func.params.len > 0) {
+                    try self.printIndent();
+                    try self.printPrefix();
+                    std.debug.print("Parameters\n", .{});
+                    self.addLevel();
+                    try self.printParameters(func.params);
+                    self.removeLevel();
+                }
                 try self.printStatement(func.body);
-
                 self.removeLevel();
             },
 
@@ -94,7 +99,6 @@ pub const Printer = struct {
                 try self.printExpression(assign.value);
                 self.removeLevel();
             },
-
             .if_stmt => |ifstmt| {
                 try self.printIndent();
                 try self.printPrefix();
@@ -192,21 +196,22 @@ pub const Printer = struct {
                 }
                 self.removeLevel();
             },
-            .index => {},
-        }
-    }
-    fn printVarInit(self: *Printer, inita: ast.VarInit) !void {
-        switch (inita) {
-            .expr => |expr| {
-                try self.printExpression(expr);
+            .index => |index| {
+                try self.printIndent();
+                try self.printPrefix();
+                std.debug.print("Index {s}\n", .{index.array});
+                self.addLevel();
+                try self.printExpression(index.subscript);
+                self.removeLevel();
             },
-            .array_literal => {},
         }
     }
-
     fn printParameters(self: *Printer, params: []const ast.Param) !void {
-        _ = self;
-        _ = params;
+        for (params) |param| {
+            try self.printIndent();
+            try self.printPrefix();
+            std.debug.print("Param {s}: {s}\n", .{ param.name, typeName(param.ty) });
+        }
     }
 
     fn printIndent(self: *Printer) !void {
