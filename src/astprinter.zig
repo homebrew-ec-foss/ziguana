@@ -77,7 +77,16 @@ pub const Printer = struct {
                         .expr => |expr| {
                             try self.printExpression(expr);
                         },
-                        .array_literal => {},
+                        .array_literal => |elements| {
+                            try self.printIndent();
+                            try self.printPrefix();
+                            std.debug.print("ArrayLiteral\n", .{});
+                            self.addLevel();
+                            for (elements) |elem| {
+                                try self.printExpression(elem);
+                            }
+                            self.removeLevel();
+                        },
                     }
                     self.removeLevel();
                     self.removeLevel();

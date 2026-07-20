@@ -203,27 +203,24 @@ pub const Parser = struct {
         }
     }
     fn parseVarInit(self: *Self) !VarInit {
-        if (getTag(self.peek()) != .lbracket) {
+        if (getTag(self.peek()) != .lbrace) {
             return .{
                 .expr = try self.parseExpression(),
             };
         }
-
-        _ = try self.consume(.lbracket);
-
+        _ = try self.consume(.lbrace);
         var elements = std.ArrayList(*ast.Expr).empty;
-
-        if (getTag(self.peek()) != .rbracket) {
+        if (getTag(self.peek()) != .rbrace) {
             try elements.append(self.allocator, try self.parseExpression());
-
             while (getTag(self.peek()) == .comma) {
-                _ = self.advance();
+                _ = try self.consume(.comma);
                 try elements.append(self.allocator, try self.parseExpression());
             }
         }
-
-        _ = try self.consume(.rbracket);
-        return .{ .array_literal = try elements.toOwnedSlice(self.allocator) };
+        _ = try self.consume(.rbrace);
+        return .{
+            .array_literal = try elements.toOwnedSlice(self.allocator),
+        };
     }
     fn parseVarDecl(self: *Self) !*Stmt {
         const typeToken = try self.consume(.type_);
