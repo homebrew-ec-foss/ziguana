@@ -6,8 +6,8 @@ const cli = @import("cli.zig");
 const astprinter = @import("astprinter.zig");
 
 pub fn main(init: std.process.Init) !void {
-    const io = init.io;
     const arena = init.arena.allocator();
+    const io = init.io;
     const args = try cli.parseArgs(init);
     if (args.ask_help or args.ask_version) {
         return;
@@ -17,7 +17,9 @@ pub fn main(init: std.process.Init) !void {
     const tokens = try lexer.lex(arena);
 
     if (args.token_print) {
-        // print tokens
+        for (tokens.items) |token| {
+            std.debug.print("{}\n", .{token});
+        }
     }
     var p = parser.Parser.init(arena, tokens.items);
     const program = try p.parse();
@@ -26,4 +28,3 @@ pub fn main(init: std.process.Init) !void {
         try printer.printAst(program);
     }
 }
-//need to switch to arena allocator
