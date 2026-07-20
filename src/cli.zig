@@ -15,28 +15,33 @@ pub fn parseArgs(init: std.process.Init) !Arguments {
     var arguments = Arguments{};
 
     if (args.len < 2) {
-        return error.TooFewArguments;
+        return error.pathNotProvided;
     }
 
-    if (std.mem.eql(u8, args[1], "--help")) {
-        arguments.ask_help = true;
-        print("Ziguana\n1) --astprint : Print abstract syntax tree parsed from source file\n2) --tokens : Prints lexed tokens from the source file\n3) --version : Shows ziguana version\n", .{});
-        return arguments;
-    }
-    if (std.mem.eql(u8, args[1], "--version")) {
-        arguments.ask_version = true;
-        print("Version : 0.0.0", .{});
-        return arguments;
-    }
+    var errorFlag: u8 = 0;
     arguments.path = args[1];
     for (args[2..]) |arg| {
+        if (std.mem.eql(u8, arg, "--help")) {
+            print("Ziguana\n1) --astprint : Print abstract syntax tree parsed from source file\n2) --tokens : Prints lexed tokens from the source file\n3) --version : Shows ziguana version", .{});
+            arguments.ask_help = true;
+            errorFlag = 1;
+        }
         if (std.mem.eql(u8, arg, "--astprint")) {
             arguments.ast_print = true;
-        } else if (std.mem.eql(u8, arg, "--tokens")) {
-            arguments.token_print = true;
-        } else {
-            return error.InvalidArguments;
+            errorFlag = 1;
         }
+        if (std.mem.eql(u8, arg, "--tokens")) {
+            arguments.token_print = true;
+            errorFlag = 1;
+        }
+        if (std.mem.eql(u8, arg, "--version")) {
+            print("Version : 0.0.0", .{});
+            arguments.ask_version = true;
+            errorFlag = 1;
+        }
+    }
+    if (args.len > 2 and errorFlag == 0) {
+        return error.InvalidArguments;
     }
     print("\n", .{});
 
