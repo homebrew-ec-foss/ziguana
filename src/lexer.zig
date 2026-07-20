@@ -46,6 +46,7 @@ pub const TokenTag = enum {
     semicolon,
     true_,
     false_,
+    void_,
     invalid, // for collecting errors
 };
 
@@ -89,6 +90,7 @@ pub const TokenPayload = union(TokenTag) {
     true_: void,
     false_: void,
     invalid: []const u8,
+    void_: void,
 };
 
 pub const Token = struct {
@@ -181,26 +183,25 @@ pub const Lexer = struct {
         }
         return self.input[start..self.position];
     }
-    pub fn lookUpKeyword(word: []const u8) TokenPayload 
-    {
-        const keywords = 
-        .{
-            .{ "fn", TokenPayload{ .func = {} } },
-            .{ "int", TokenPayload{ .type_ = .Int } },
-            .{ "bool", TokenPayload{ .type_ = .Bool } },
-            .{ "string", TokenPayload{ .type_ = .String } },
-            .{ "if", TokenPayload{ .if_ = {} } },
-            .{ "else", TokenPayload{ .else_ = {} } },
-            .{ "while", TokenPayload{ .while_ = {} } },
-            .{ "return", TokenPayload{ .return_ = {} } },
-            .{ "true", TokenPayload{ .true_ = {} } },
-            .{ "false", TokenPayload{ .false_ = {} } },
-        };
+    pub fn lookUpKeyword(word: []const u8) TokenPayload {
+        const keywords =
+            .{
+                .{ "fn", TokenPayload{ .func = {} } },
+                .{ "int", TokenPayload{ .type_ = .Int } },
+                .{ "bool", TokenPayload{ .type_ = .Bool } },
+                .{ "string", TokenPayload{ .type_ = .String } },
+                .{ "if", TokenPayload{ .if_ = {} } },
+                .{ "void", TokenPayload{ .void_ = {} } },
+                .{ "else", TokenPayload{ .else_ = {} } },
+                .{ "while", TokenPayload{ .while_ = {} } },
+                .{ "return", TokenPayload{ .return_ = {} } },
+                .{ "true", TokenPayload{ .true_ = {} } },
+                .{ "false", TokenPayload{ .false_ = {} } },
+            };
 
         const map = std.StaticStringMap(TokenPayload).initComptime(keywords);
 
-        if (map.get(word)) |payload| 
-        {
+        if (map.get(word)) |payload| {
             return payload;
         }
         return .{ .identifier = word };
@@ -219,41 +220,40 @@ pub const Lexer = struct {
         const start_col: usize = self.column;
 
         // Symbols -
-        switch (self.ch)
-        {
-            '(' =>{
+        switch (self.ch) {
+            '(' => {
                 self.readChar();
                 return Token{ .payload = .{ .lparen = {} }, .line = start_line, .column = start_col };
             },
-            ')' =>{
+            ')' => {
                 self.readChar();
                 return Token{ .payload = .{ .rparen = {} }, .line = start_line, .column = start_col };
             },
-            '{' =>{
+            '{' => {
                 self.readChar();
                 return Token{ .payload = .{ .lbrace = {} }, .line = start_line, .column = start_col };
             },
-            '}' =>{
+            '}' => {
                 self.readChar();
                 return Token{ .payload = .{ .rbrace = {} }, .line = start_line, .column = start_col };
             },
-            '[' =>{
+            '[' => {
                 self.readChar();
                 return Token{ .payload = .{ .lbracket = {} }, .line = start_line, .column = start_col };
             },
-            ']' =>{
+            ']' => {
                 self.readChar();
                 return Token{ .payload = .{ .rbracket = {} }, .line = start_line, .column = start_col };
             },
-            ',' =>{
+            ',' => {
                 self.readChar();
                 return Token{ .payload = .{ .comma = {} }, .line = start_line, .column = start_col };
             },
-            ';' =>{
+            ';' => {
                 self.readChar();
                 return Token{ .payload = .{ .semicolon = {} }, .line = start_line, .column = start_col };
             },
-            ':' =>{
+            ':' => {
                 self.readChar();
                 return Token{ .payload = .{ .colon = {} }, .line = start_line, .column = start_col };
             },
