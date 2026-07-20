@@ -35,7 +35,7 @@ pub fn parseArgs(init: std.process.Init) !Arguments {
             errorFlag = 1;
         }
         if (std.mem.eql(u8, arg, "--version")) {
-            print("Version : 0.0.0", .{}); //hardcoded for now
+            print("Version : 0.0.0", .{});
             arguments.ask_version = true;
             errorFlag = 1;
         }
