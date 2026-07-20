@@ -213,6 +213,14 @@ pub const Printer = struct {
                 try self.printExpression(index.subscript);
                 self.removeLevel();
             },
+            .unary => |unary| {
+                try self.printIndent();
+                try self.printPrefix();
+                std.debug.print("Unary {s}\n", .{operatorName(unary.op)});
+                self.addLevel();
+                try self.printExpression(unary.operand);
+                self.removeLevel();
+            },
         }
     }
     fn printParameters(self: *Printer, params: []const ast.Param) !void {

@@ -25,6 +25,12 @@ pub const Expr = union(enum) {
         subscript: *Expr,
     },
     literal: Literal,
+    unary: UnaryExpr,
+};
+
+pub const UnaryExpr = struct {
+    op: TokenTag,
+    operand: *Expr,
 };
 
 pub const VarInit = union(enum) {
@@ -157,5 +163,10 @@ pub fn makeExprStmt(a: std.mem.Allocator, expr: *Expr) !*Stmt {
 pub fn makeProgram(a: std.mem.Allocator, stmts: []*Stmt) !*Stmt {
     const node = try a.create(Stmt);
     node.* = .{ .program = stmts };
+    return node;
+}
+pub fn makeUnary(a: std.mem.Allocator, op: TokenTag, operand: *Expr) !*Expr {
+    const node = try a.create(Expr);
+    node.* = .{ .unary = .{ .op = op, .operand = operand } };
     return node;
 }

@@ -291,10 +291,10 @@ pub const Parser = struct {
         return left;
     }
     fn parseFactor(self: *Self) ParserErrors!*Expr {
-        var left = try self.parsePrimary();
+        var left = try self.parseUnary();
         while (getTag(self.peek()) == .star or getTag(self.peek()) == .slash or getTag(self.peek()) == .mod) {
             const operator = self.advance();
-            const right = try self.parsePrimary();
+            const right = try self.parseUnary();
             left = try ast.makeBinary(self.allocator, getTag(operator), left, right);
         }
         return left;
@@ -335,6 +335,19 @@ pub const Parser = struct {
                 return error.ExpectedExpression;
             },
         }
+    }
+    fn parseUnary(self: *Self) ParserErrors!*Expr {
+        const tag = getTag(self.peek());
+        if (tag == .minus or tag == .plus) {
+            const op = self.advance();
+            const operand = try self.parseUnary();
+            return ast.makeUnary(
+                self.allocator,
+                getTag(op),
+                operand,
+            );
+        }
+        return self.parsePrimary();
     }
     fn parseAssignment(self: *Self) !*Stmt {
         const nameToken = try self.consume(.identifier);
