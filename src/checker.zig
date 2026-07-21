@@ -264,6 +264,11 @@ pub const Checker = struct {
             },
 
             .call => |c| blk: {
+                if (std.mem.eql(u8, c.callee, "print")) {
+                    // builtin: accepts any number of args of any type, returns void
+                    for (c.args) |arg| _ = try self.checkExpr(arg);
+                    break :blk .void_;
+                }
                 const sig = self.functions.get(c.callee) orelse {
                     try self.addError("call to undeclared function '{s}'", .{c.callee});
                     for (c.args) |arg| _ = try self.checkExpr(arg);
