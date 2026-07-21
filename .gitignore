@@ -10,3 +10,4 @@ src/hi.txt
 .zig-cache
 zig-out
 build.zig.zon
+exampleprog
