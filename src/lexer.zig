@@ -46,8 +46,8 @@ pub const TokenTag = enum {
     semicolon,
     true_,
     false_,
-    void_,
     invalid, // for collecting errors
+    void_,
 };
 
 pub const TokenPayload = union(TokenTag) {
