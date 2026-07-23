@@ -15,19 +15,229 @@ pub const CodeGen = struct {
             .indentation = 0,
         };
     }
-    //pub fn generate(self: *CodeGen, progam: *ast.Stmt) []const u8 {
-
-    //  }
-    fn write(self: *CodeGen, bytes: []const u8) void {
-        self.output.appendSlice(self.allocator, bytes);
+    pub fn deinit(self: *CodeGen) void {
+        self.output.deinit(self.allocator);
     }
-    fn writeFmt(self: *CodeGen, fmt: []const u8, args: anytype) void {
-        const text = std.fmt.allocPrint(self.allocator, fmt, args);
-        self.output.appendSlice(self.allocator, text);
+    pub fn generate(self: *CodeGen, program: *ast.Stmt) ![]const u8 {
+        try self.genStmt(program);
+        return self.output.items;
     }
-    fn writeIndent(self: *CodeGen) void {
+    pub fn genExpr(self: *CodeGen, expr: *ast.Expr) !void {
+        switch(expr.*)
+        {
+            .literal => |lit| {
+                switch(lit) {
+                    .number => |num| try self.writeFmt("{d}", .{num}),
+                    .boolean => |b| try self.write(if (b) "true" else "false"),
+                    .string => |str| try self.write("\"{s}\"", .{str}),
+                }
+            },
+            .variable => |name| try self.write(name),
+            .unary => |un| {
+                try self.write(self.mapOp(un.op)); 
+                try self.genExpr(un.operand);
+            },   
+            .binary => |bin| {
+                try self.write("(");
+                try self.genExpr(bin.left);
+                try self.writeFmt(" {s} ", .{self.mapOp(bin.op)});
+                try self.genExpr(bin.right);
+                try self.write(")");
+            },
+            .index => |idx| {
+                try self.write(idx.array);
+                try self.write("[");
+                try self.genExpr(idx.subscript);
+                try self.write("]");
+            },
+            .call => |call| {
+                try self.writeFmt("{s}(", .{call.callee});
+                for (call.args, 0 ..) |arg, i|{
+                    if(i>0){
+                        try self.write(", ");
+                        try self.genExpr(arg);
+                    }
+                }
+                try self.write(")");
+            },
+        }
+    }
+    pub fn genStmt(self: *CodeGen, stmt: *ast.Stmt) !void {
+        switch(stmt.*) {
+            .expr_stmt => |e| {
+                try self.writeIndent();
+                try self.genExpr(e);
+                try self.write(";\n");
+            },
+            .return_stmt => |expr| {
+                try self.writeIndent();
+                try self.write("return");
+                if(expr) |e| {
+                    try self.write(" ");
+                    try self.genExpr(e);
+                }
+                try self.write(";\n");
+            },
+            .assignment => |assign| {
+                try self.writeIndent();
+                try self.write(assign.name);
+                if(assign.index) |idx| {
+                    try self.write("[");
+                    try self.genExpr(idx);
+                    try self.write("]");
+                }
+                try self.writeFmt(" {s} ", .{self.mapOp(assign.op)});
+                try self.genExpr(assign.value);
+                try self.write(";\n");
+            },
+            .var_decl => |d| {
+                try self.writeIndent();
+                try self.write(self.mapType(d.ty));
+                try self.writeFmt(" {s}", .{d.name});
+                if(d.array_size) |s| {
+                    try self.writeFmt("[{d}]", .{s});
+                }
+                if(d.init) |ini| {
+                    try self.write(" = ");
+                    switch(ini){
+                        .expr => |e| try self.genExpr(e),
+                        .array_literal => |ele| {
+                            try self.write("{");
+                            for(ele, 0..) |item, idx|{
+                                if(idx>0){
+                                    try self.write(", ");
+                                }
+                                try self.genExpr(item);
+                            }
+                            try self.write("}");
+                        }
+                    }
+                }
+                try self.write(";\n");
+            },
+            .block => |stmts| {
+                try self.writeIndent();
+                try self.write("{\n");
+                self.addLevel();
+                for(stmts) |s| {
+                    try self.genStmt(s);
+                }
+                self.removeLevel();
+                try self.writeIndent();
+                try self.write("}\n");
+            },
+            .if_stmt => |if_node| {
+                try self.writeIndent();
+                try self.write("if (");
+                try self.genExpr(if_node.condition);
+                try self.write(") ");
+                if(if_node.then_branch.* == .block){
+                    try self.write("{\n");
+                    self.addLevel();
+                    for (if_node.then_branch.block) |s| {
+                        try self.genStmt(s);
+                    }
+                    self.removeLevel();
+                    try self.writeIndent();
+                    try self.write("}\n");
+                }
+                else {
+                    try self.write("\n");
+                    self.addLevel();
+                    try self.genStmt(if_node.then_branch);
+                    self.removeLevel();
+                }
+                if (if_node.else_branch) |else_stmt| {
+                    try self.write("else ");
+                    try self.genStmt(else_stmt);
+                }
+            },
+            .while_stmt => |while_node| {
+                try self.writeIndent();
+                try self.write("while (");
+                try self.genExpr(while_node.condition);
+                try self.write(") ");
+                if(while_node.body.* == .block){
+                    try self.write("{\n");
+                    self.addLevel();
+                    for (while_node.body.block) |s| {
+                        try self.genStmt(s);
+                    }
+                    self.removeLevel();
+                    try self.writeIndent();
+                    try self.write("}\n");
+                }
+                else {
+                    try self.write("\n");
+                    self.addLevel();
+                    try self.genStmt(while_node.body);
+                    self.removeLevel();
+                }
+            },
+            .func_decl => |func| {
+                try self.writeIndent();
+                try self.write(self.mapType(func.return_type));
+                try self.writeFmt(" {s}(", .{func.name});
+                for(func.params, 0..) |param, idx| {
+                    if(idx>0) {
+                        try self.write(", ");
+                    }
+                    try self.writeFmt("{s} {s}", .{self.mapType(param.ty), param.name});
+                }
+                try self.write(") ");
+                try self.genStmt(func.body);
+                try self.write("\n");
+            },
+            .program => |stmts| {
+                try self.write("#include <stdio.h>\n");
+                try self.write("#include <stdbool.h>\n");
+                try self.write("#include <stdint.h>\n\n");
+                for (stmts) |stm| {
+                    try self.genStmt(stm);
+                }
+            },
+        }
+    }
+    fn mapType(ty: TypeKind) []const u8 {
+        return switch (ty) {
+            .Int => "int64_t",
+            .Bool => "bool",
+            .String => "const char*",
+        };
+    }
+    fn mapOp(op: TokenTag) []const u8 {
+        return switch (op) {
+            .plus => "+",
+            .minus => "-",
+            .star => "*",
+            .slash => "/",
+            .mod => "%",
+            .equality => "==",
+            .inequality => "!=",
+            .lessthan => "<",
+            .greaterthan => ">",
+            .lessthan_equal => "<=",
+            .greaterthan_equal => ">=",
+            .equal => "=",
+            .plus_equal => "+=",
+            .minus_equal => "-=",
+            .star_equal => "*=",
+            .slash_equal => "/=",
+            .mod_equal => "%=",
+            else => "",
+        };
+    }
+    fn write(self: *CodeGen, bytes: []const u8) !void {
+        try self.output.appendSlice(self.allocator, bytes);
+    }
+    fn writeFmt(self: *CodeGen, fmt: []const u8, args: anytype) !void {
+        const text = try std.fmt.allocPrint(self.allocator, fmt, args);
+        defer self.allocator.free(text);
+        try self.output.appendSlice(self.allocator, text);
+    }
+    fn writeIndent(self: *CodeGen) !void {
         for (0..self.indentation) |_| {
-            self.write("    ");
+            try self.write("    ");
         }
     }
     fn addLevel(self: *CodeGen) void {
