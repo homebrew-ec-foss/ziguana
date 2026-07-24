@@ -1,0 +1,4 @@
+fn void hello(){
+  int x=10;
+  return x;
+}
