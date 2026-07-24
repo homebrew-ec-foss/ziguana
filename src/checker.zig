@@ -72,6 +72,24 @@ pub const Checker = struct {
         }
         return null;
     }
+    fn stmtGuaranteesReturn(stmt: *const Stmt) bool {
+        return switch (stmt.*) {
+            .return_stmt => true,
+            .block => |stmts| {
+                for (stmts) |s| {
+                    if (stmtGuaranteesReturn(s)) return true;
+                }
+                return false;
+            },
+            .if_stmt => |i| {
+                if (i.else_branch) |eb| {
+                    return stmtGuaranteesReturn(i.then_branch) and stmtGuaranteesReturn(eb);
+                }
+                return false;
+            },
+            else => false,
+        };
+    }
 
     pub fn collectFunctions(self: *Self, top_level: []const *Stmt) !void {
         for (top_level) |stmt| {
@@ -182,6 +200,15 @@ pub const Checker = struct {
                 }
                 try self.checkStmt(f.body);
                 self.popScope();
+                //patch for non void returning things
+                if (f.return_type != .void_ and !stmtGuaranteesReturn(f.body)) {
+                    try self.addError(
+                        f.line,
+                        f.column,
+                        "control reaches end of non-void function '{s}' without returning a value",
+                        .{f.name},
+                    );
+                }
 
                 self.current_return_type = prev_return;
             },
