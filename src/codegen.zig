@@ -11,7 +11,7 @@ pub const CodeGen = struct {
     pub fn init(allocator: std.mem.Allocator) CodeGen {
         return .{
             .allocator = allocator,
-            .output = .empty(),
+            .output = .empty,
             .indentation = 0,
         };
     }
@@ -23,24 +23,23 @@ pub const CodeGen = struct {
         return self.output.items;
     }
     pub fn genExpr(self: *CodeGen, expr: *ast.Expr) !void {
-        switch(expr.*)
-        {
+        switch (expr.*) {
             .literal => |lit| {
-                switch(lit) {
+                switch (lit) {
                     .number => |num| try self.writeFmt("{d}", .{num}),
                     .boolean => |b| try self.write(if (b) "true" else "false"),
-                    .string => |str| try self.write("\"{s}\"", .{str}),
+                    .string => |str| try self.writeFmt("\"{s}\"", .{str}),
                 }
             },
             .variable => |name| try self.write(name),
             .unary => |un| {
-                try self.write(self.mapOp(un.op)); 
+                try self.write(mapOp(un.op));
                 try self.genExpr(un.operand);
-            },   
+            },
             .binary => |bin| {
                 try self.write("(");
                 try self.genExpr(bin.left);
-                try self.writeFmt(" {s} ", .{self.mapOp(bin.op)});
+                try self.writeFmt(" {s} ", .{mapOp(bin.op)});
                 try self.genExpr(bin.right);
                 try self.write(")");
             },
@@ -52,18 +51,21 @@ pub const CodeGen = struct {
             },
             .call => |call| {
                 try self.writeFmt("{s}(", .{call.callee});
-                for (call.args, 0 ..) |arg, i|{
-                    if(i>0){
+                for (call.args, 0..) |arg, i| {
+                    if (i > 0) {
                         try self.write(", ");
-                        try self.genExpr(arg);
                     }
+                    try self.genExpr(arg);
                 }
                 try self.write(")");
+            },
+            .interpolated_string => {
+                @panic("interpolated strings not implemented");
             },
         }
     }
     pub fn genStmt(self: *CodeGen, stmt: *ast.Stmt) !void {
-        switch(stmt.*) {
+        switch (stmt.*) {
             .expr_stmt => |e| {
                 try self.writeIndent();
                 try self.genExpr(e);
@@ -72,7 +74,7 @@ pub const CodeGen = struct {
             .return_stmt => |expr| {
                 try self.writeIndent();
                 try self.write("return");
-                if(expr) |e| {
+                if (expr) |e| {
                     try self.write(" ");
                     try self.genExpr(e);
                 }
@@ -81,36 +83,36 @@ pub const CodeGen = struct {
             .assignment => |assign| {
                 try self.writeIndent();
                 try self.write(assign.name);
-                if(assign.index) |idx| {
+                if (assign.index) |idx| {
                     try self.write("[");
                     try self.genExpr(idx);
                     try self.write("]");
                 }
-                try self.writeFmt(" {s} ", .{self.mapOp(assign.op)});
+                try self.writeFmt(" {s} ", .{mapOp(assign.op)});
                 try self.genExpr(assign.value);
                 try self.write(";\n");
             },
             .var_decl => |d| {
                 try self.writeIndent();
-                try self.write(self.mapType(d.ty));
+                try self.write(mapType(d.ty));
                 try self.writeFmt(" {s}", .{d.name});
-                if(d.array_size) |s| {
+                if (d.array_size) |s| {
                     try self.writeFmt("[{d}]", .{s});
                 }
-                if(d.init) |ini| {
+                if (d.init) |ini| {
                     try self.write(" = ");
-                    switch(ini){
+                    switch (ini) {
                         .expr => |e| try self.genExpr(e),
                         .array_literal => |ele| {
                             try self.write("{");
-                            for(ele, 0..) |item, idx|{
-                                if(idx>0){
+                            for (ele, 0..) |item, idx| {
+                                if (idx > 0) {
                                     try self.write(", ");
                                 }
                                 try self.genExpr(item);
                             }
                             try self.write("}");
-                        }
+                        },
                     }
                 }
                 try self.write(";\n");
@@ -119,7 +121,7 @@ pub const CodeGen = struct {
                 try self.writeIndent();
                 try self.write("{\n");
                 self.addLevel();
-                for(stmts) |s| {
+                for (stmts) |s| {
                     try self.genStmt(s);
                 }
                 self.removeLevel();
@@ -131,7 +133,7 @@ pub const CodeGen = struct {
                 try self.write("if (");
                 try self.genExpr(if_node.condition);
                 try self.write(") ");
-                if(if_node.then_branch.* == .block){
+                if (if_node.then_branch.* == .block) {
                     try self.write("{\n");
                     self.addLevel();
                     for (if_node.then_branch.block) |s| {
@@ -140,8 +142,7 @@ pub const CodeGen = struct {
                     self.removeLevel();
                     try self.writeIndent();
                     try self.write("}\n");
-                }
-                else {
+                } else {
                     try self.write("\n");
                     self.addLevel();
                     try self.genStmt(if_node.then_branch);
@@ -157,7 +158,7 @@ pub const CodeGen = struct {
                 try self.write("while (");
                 try self.genExpr(while_node.condition);
                 try self.write(") ");
-                if(while_node.body.* == .block){
+                if (while_node.body.* == .block) {
                     try self.write("{\n");
                     self.addLevel();
                     for (while_node.body.block) |s| {
@@ -166,8 +167,7 @@ pub const CodeGen = struct {
                     self.removeLevel();
                     try self.writeIndent();
                     try self.write("}\n");
-                }
-                else {
+                } else {
                     try self.write("\n");
                     self.addLevel();
                     try self.genStmt(while_node.body);
@@ -176,13 +176,13 @@ pub const CodeGen = struct {
             },
             .func_decl => |func| {
                 try self.writeIndent();
-                try self.write(self.mapType(func.return_type));
+                try self.write(mapType(func.return_type));
                 try self.writeFmt(" {s}(", .{func.name});
-                for(func.params, 0..) |param, idx| {
-                    if(idx>0) {
+                for (func.params, 0..) |param, idx| {
+                    if (idx > 0) {
                         try self.write(", ");
                     }
-                    try self.writeFmt("{s} {s}", .{self.mapType(param.ty), param.name});
+                    try self.writeFmt("{s} {s}", .{ mapType(param.ty), param.name });
                 }
                 try self.write(") ");
                 try self.genStmt(func.body);
@@ -230,7 +230,7 @@ pub const CodeGen = struct {
     fn write(self: *CodeGen, bytes: []const u8) !void {
         try self.output.appendSlice(self.allocator, bytes);
     }
-    fn writeFmt(self: *CodeGen, fmt: []const u8, args: anytype) !void {
+    fn writeFmt(self: *CodeGen, comptime fmt: []const u8, args: anytype) !void {
         const text = try std.fmt.allocPrint(self.allocator, fmt, args);
         defer self.allocator.free(text);
         try self.output.appendSlice(self.allocator, text);
