@@ -5,6 +5,7 @@ pub const TypeKind = enum {
     Int,
     Bool, //B is in Upper-case
     String,
+    void_, //fix later
 };
 
 pub const lexerMode = enum { //String interpolation using state mode 
@@ -52,6 +53,7 @@ pub const TokenTag = enum {
     true_,
     false_,
     invalid, // for collecting errors
+    void_,
     string_start,
     string_end,
     interpolation_start,
@@ -98,8 +100,8 @@ pub const TokenPayload = union(TokenTag) {
     semicolon: void,
     true_: void,
     false_: void,
-    void_: void,
     invalid: []const u8,
+    void_: void,
     string_start: void,
     string_end: void,
     interpolation_start: void,
@@ -237,12 +239,12 @@ pub const Lexer = struct {
                 .{ "bool", TokenPayload{ .type_ = .Bool } },
                 .{ "string", TokenPayload{ .type_ = .String } },
                 .{ "if", TokenPayload{ .if_ = {} } },
-                .{ "void", TokenPayload{ .void_ = {} } },
                 .{ "else", TokenPayload{ .else_ = {} } },
                 .{ "while", TokenPayload{ .while_ = {} } },
                 .{ "return", TokenPayload{ .return_ = {} } },
                 .{ "true", TokenPayload{ .true_ = {} } },
                 .{ "false", TokenPayload{ .false_ = {} } },
+                .{ "void", TokenPayload{ .type_ = .void_ } },
             };
 
         const map = std.StaticStringMap(TokenPayload).initComptime(keywords);

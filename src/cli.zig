@@ -9,8 +9,33 @@ pub const Arguments = struct {
     emit_c: bool = false,
     output_c: []const u8 = "",
     executable: []const u8 = "",
+    c_file: bool = false,
+    print_checks: bool = false,
 };
 pub fn parseArgs(init: std.process.Init) !Arguments {
+    const banner =
+        \\_________ ___
+        \\\$$$$$$$$\\$$\                                                
+        \\ \____$$  |\__|                                                
+        \\     $$  / $$\ $$$$$$\  $$\   $$\ $$$$$$\  $$$$$$$\   $$$$$$\  
+        \\    $$  /  $$ |$$  __$$\ $$ |  $$ | \____$$\ $$  __$$\ \____$$\ 
+        \\   $$  /   $$ |$$ /  $$ |$$ |  $$ | $$$$$$$ |$$ |  $$ | $$$$$$$ |
+        \\  $$  /    $$ |$$ |  $$ |$$ |  $$ |$$  __$$ |$$ |  $$ |$$  __$$ |
+        \\ $$$$$$$$\ $$ |\$$$$$$$ |\$$$$$$  |\$$$$$$$ |$$ |  $$ |\$$$$$$$ |
+        \\ \________|\__| \____$$ | \______/  \_______|\__|  \__| \_______|
+        \\               $$\   $$ |                                      
+        \\               \$$$$$$  |                                      
+        \\                \______/                                       
+        \\
+        \\ Ziguana
+        \\ 1) --version  : Shows ziguana Version
+        \\ 2) --help     : Shows the available flags
+        \\ 1) --tokens   : Prints lexed tokens from the source file
+        \\ 2) --astprint : Print abstract syntax tree parsed from source file 
+        \\ 3) --check    : Prints Syntax errors from the source file
+        \\ 4) --emit-c   : Emit generated C source
+        \\ 5) -o         : Generate output file
+    ;
     const args = try init.minimal.args.toSlice(init.arena.allocator());
     var arguments = Arguments{};
     var pathSet = false;
@@ -18,7 +43,7 @@ pub fn parseArgs(init: std.process.Init) !Arguments {
     while (i < args.len) {
         const arg = args[i];
         if (std.mem.eql(u8, arg, "--help")) {
-            print("Ziguana\n1) --astprint : Print abstract syntax tree parsed from source file\n2) --tokens : Prints lexed tokens from the source file\n3) --version : Shows ziguana version\n4) --emit-c <file> : Emit generated C source\n5) -o <file> : Output executable name\n", .{});
+            print("{s}\n", .{banner});
             arguments.ask_help = true;
         } else if (std.mem.eql(u8, arg, "--astprint")) {
             arguments.ast_print = true;
@@ -43,8 +68,8 @@ pub fn parseArgs(init: std.process.Init) !Arguments {
         } else if (!pathSet) {
             arguments.path = arg;
             pathSet = true;
-        } else {
-            return error.UnknownArgument;
+        } else if (std.mem.eql(u8, arg, "--check")) { //cn be changed later
+            arguments.print_checks = true;
         }
         i += 1;
     }

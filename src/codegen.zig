@@ -25,13 +25,13 @@ pub const CodeGen = struct {
     pub fn genExpr(self: *CodeGen, expr: *ast.Expr) !void {
         switch (expr.*) {
             .literal => |lit| {
-                switch (lit) {
+                switch (lit.value) {
                     .number => |num| try self.writeFmt("{d}", .{num}),
                     .boolean => |b| try self.write(if (b) "true" else "false"),
                     .string => |str| try self.writeFmt("\"{s}\"", .{str}),
                 }
             },
-            .variable => |name| try self.write(name),
+            .variable => |var_| try self.write(var_.name),
             .unary => |un| {
                 try self.write(mapOp(un.op));
                 try self.genExpr(un.operand);
@@ -74,7 +74,7 @@ pub const CodeGen = struct {
             .return_stmt => |expr| {
                 try self.writeIndent();
                 try self.write("return");
-                if (expr) |e| {
+                if (expr.value) |e| {
                     try self.write(" ");
                     try self.genExpr(e);
                 }
@@ -203,6 +203,7 @@ pub const CodeGen = struct {
             .Int => "int64_t",
             .Bool => "bool",
             .String => "const char*",
+            .void_ => "void",
         };
     }
     fn mapOp(op: TokenTag) []const u8 {
