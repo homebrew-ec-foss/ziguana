@@ -8,7 +8,7 @@ pub const TypeKind = enum {
     void_, //fix later
 };
 
-pub const lexerMode = enum { //String interpolation using state mode 
+pub const lexerMode = enum { //String interpolation using state mode
     normal_state,
     string_state,
 };
@@ -177,13 +177,11 @@ pub const Lexer = struct {
         const number_slice: []const u8 = self.input[start..self.position];
         return std.fmt.parseInt(i64, number_slice, 10) catch 0;
     }
-    pub fn readString(self: *Lexer) []const u8 
-    {
+    pub fn readString(self: *Lexer) []const u8 {
         const start: usize = self.position;
 
         while (self.ch != '"' and self.ch != 0 and self.ch != '{') {
-            if (self.ch == '\n') 
-            {
+            if (self.ch == '\n') {
                 self.string_error = "Newline in string literal";
                 self.string_error_line = self.line;
                 self.string_error_column = self.column;
@@ -196,21 +194,18 @@ pub const Lexer = struct {
                 return self.input[start..self.position];
             }
 
-            if (self.ch == '\\') 
-            {
+            if (self.ch == '\\') {
                 const esc_line = self.line;
                 const esc_col = self.column;
 
                 self.readChar();
 
-                if (self.ch != 'n' and self.ch != 't' and self.ch != 'r' and self.ch != '"' and self.ch != '\\')
-                {
+                if (self.ch != 'n' and self.ch != 't' and self.ch != 'r' and self.ch != '"' and self.ch != '\\') {
                     self.string_error = "Invalid escape sequence";
                     self.string_error_line = esc_line;
                     self.string_error_column = esc_col;
 
-                    if (self.ch != 0) 
-                    {
+                    if (self.ch != 0) {
                         self.readChar();
                     }
 
@@ -257,35 +252,25 @@ pub const Lexer = struct {
 
     // main token loop function -
     pub fn nextToken(self: *Lexer) Token {
-
-        if (self.mode == lexerMode.string_state)
-        {
+        if (self.mode == lexerMode.string_state) {
             const start_line: usize = self.line;
             const start_col: usize = self.column;
-            if (self.ch == 0)
-            {
+            if (self.ch == 0) {
                 self.mode = lexerMode.normal_state;
                 return Token{ .payload = .{ .invalid = "Unterminated string literal" }, .line = start_line, .column = start_col };
-            }
-            else if(self.ch == '{')
-            {
+            } else if (self.ch == '{') {
                 self.readChar();
                 self.mode = lexerMode.normal_state;
                 self.in_interpolation = true;
-                return Token{ .payload = .{ .interpolation_start = {}}, .line = start_line, .column = start_col };
-            }
-            else if(self.ch == '"')
-            {
+                return Token{ .payload = .{ .interpolation_start = {} }, .line = start_line, .column = start_col };
+            } else if (self.ch == '"') {
                 self.readChar();
                 self.mode = lexerMode.normal_state;
-                return Token{ .payload = .{ .string_end = {}}, .line = start_line, .column = start_col };
-            }
-            else 
-            {
+                return Token{ .payload = .{ .string_end = {} }, .line = start_line, .column = start_col };
+            } else {
                 const segment = self.readString();
 
-                if (self.string_error) |message| 
-                {
+                if (self.string_error) |message| {
                     const error_line = self.string_error_line;
                     const error_column = self.string_error_column;
 
@@ -293,10 +278,18 @@ pub const Lexer = struct {
                     self.string_error_line = 0;
                     self.string_error_column = 0;
 
-                    return Token{.payload = .{ .invalid = message }, .line = error_line, .column = error_column,};
+                    return Token{
+                        .payload = .{ .invalid = message },
+                        .line = error_line,
+                        .column = error_column,
+                    };
                 }
 
-                return Token{.payload = .{ .string_segment = segment }, .line = start_line, .column = start_col,};
+                return Token{
+                    .payload = .{ .string_segment = segment },
+                    .line = start_line,
+                    .column = start_col,
+                };
             }
         }
         // Whitespaces and comments -
@@ -324,15 +317,12 @@ pub const Lexer = struct {
                 return Token{ .payload = .{ .lbrace = {} }, .line = start_line, .column = start_col };
             },
             '}' => {
-                if(self.in_interpolation == true)
-                {
+                if (self.in_interpolation == true) {
                     self.readChar();
                     self.mode = lexerMode.string_state;
                     self.in_interpolation = false;
                     return Token{ .payload = .{ .interpolation_end = {} }, .line = start_line, .column = start_col };
-                }
-                else
-                {
+                } else {
                     self.readChar();
                     return Token{ .payload = .{ .rbrace = {} }, .line = start_line, .column = start_col };
                 }
@@ -441,18 +431,15 @@ pub const Lexer = struct {
 
         // Identifiers, Numbers etc -
         if (self.ch == '"') {
-            if (self.in_interpolation == true)
-            {
+            if (self.in_interpolation == true) {
                 self.in_interpolation = false;
                 self.readChar();
                 self.mode = lexerMode.normal_state;
                 return Token{ .payload = .{ .invalid = "Unterminated interpolation - missing }" }, .line = start_line, .column = start_col };
-            }
-            else
-            {
+            } else {
                 self.readChar();
                 self.mode = lexerMode.string_state;
-                return Token{ .payload = .{ .string_start = {}}, .line = start_line, .column = start_col };
+                return Token{ .payload = .{ .string_start = {} }, .line = start_line, .column = start_col };
             }
         }
         if (std.ascii.isDigit(self.ch)) {
@@ -465,8 +452,7 @@ pub const Lexer = struct {
             return Token{ .payload = keyword_payload, .line = start_line, .column = start_col };
         }
         if (self.ch == 0) {
-            if (self.in_interpolation == true)
-            {
+            if (self.in_interpolation == true) {
                 self.in_interpolation = false;
                 return Token{ .payload = .{ .invalid = "Unterminated interpolation - missing }" }, .line = start_line, .column = start_col };
             }
