@@ -33,6 +33,8 @@ pub fn parseArgs(init: std.process.Init) !Arguments {
         \\ 1) --tokens   : Prints lexed tokens from the source file
         \\ 2) --astprint : Print abstract syntax tree parsed from source file 
         \\ 3) --check    : Prints Syntax errors from the source file
+        \\ 4) --emit-c   : Emit generated C source
+        \\ 5) -o         : Generate output file
     ;
     const args = try init.minimal.args.toSlice(init.arena.allocator());
     var arguments = Arguments{};
@@ -41,7 +43,6 @@ pub fn parseArgs(init: std.process.Init) !Arguments {
     while (i < args.len) {
         const arg = args[i];
         if (std.mem.eql(u8, arg, "--help")) {
-            print("Ziguana\n1) --astprint : Print abstract syntax tree parsed from source file\n2) --tokens : Prints lexed tokens from the source file\n3) --version : Shows ziguana version\n4) --emit-c <file> : Emit generated C source\n5) -o <file> : Output executable name\n", .{});
             print("{s}\n", .{banner});
             arguments.ask_help = true;
         } else if (std.mem.eql(u8, arg, "--astprint")) {
