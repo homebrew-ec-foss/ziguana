@@ -437,6 +437,10 @@ pub const Lexer = struct {
                 self.mode = lexerMode.normal_state;
                 return Token{ .payload = .{ .invalid = "Unterminated interpolation - missing }" }, .line = start_line, .column = start_col };
             } else {
+                if (!self.hasClosingQuote()) {
+                    self.readChar();
+                    return Token{ .payload = .{ .invalid = "Unterminated string literal - missing closing \"" }, .line = start_line, .column = start_col };
+                }
                 self.readChar();
                 self.mode = lexerMode.string_state;
                 return Token{ .payload = .{ .string_start = {} }, .line = start_line, .column = start_col };
@@ -477,5 +481,20 @@ pub const Lexer = struct {
             }
         }
         return tokens;
+    }
+
+    pub fn hasClosingQuote(self: *Lexer) bool {
+        var i = self.position + 1;
+        while (i < self.input.len) {
+            const c = self.input[i];
+            if (c == '\\') {
+                i += 2;
+                continue;
+            }
+            if (c == '"') return true;
+            if (c == ';' or c == '\n') return false;
+            i += 1;
+        }
+        return false;
     }
 };

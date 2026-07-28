@@ -1,0 +1,4 @@
+fn void main(){
+  string s="Hello \"text\" !";
+  print("{s}");
+}
