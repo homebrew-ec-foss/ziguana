@@ -158,6 +158,7 @@ pub const Parser = struct {
             .if_ => self.parseIfStatement(),
             .while_ => self.parseWhileStatement(),
             .return_ => self.parseReturnStatement(),
+            .lbrace => self.parseBlock(), //patch for blocks
             .identifier => blk: {
                 const after = self.peekNext();
                 break :blk switch (getTag(after)) {
