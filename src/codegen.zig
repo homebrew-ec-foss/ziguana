@@ -8,15 +8,18 @@ pub const CodeGen = struct {
     allocator: std.mem.Allocator,
     output: std.ArrayList(u8),
     indentation: usize,
+    symbol_types: std.StringHashMap(lexer.TypeKind),
     pub fn init(allocator: std.mem.Allocator) CodeGen {
         return .{
             .allocator = allocator,
             .output = .empty,
             .indentation = 0,
+            .symbol_types = std.StringHashMap(lexer.TypeKind).init(allocator),
         };
     }
     pub fn deinit(self: *CodeGen) void {
         self.output.deinit(self.allocator);
+        self.symbol_types.deinit();
     }
     pub fn generate(self: *CodeGen, program: *ast.Stmt) ![]const u8 {
         try self.genStmt(program);
@@ -50,17 +53,65 @@ pub const CodeGen = struct {
                 try self.write("]");
             },
             .call => |call| {
-                try self.writeFmt("{s}(", .{call.callee});
-                for (call.args, 0..) |arg, i| {
-                    if (i > 0) {
-                        try self.write(", ");
-                    }
-                    try self.genExpr(arg);
+                if (std.mem.eql(u8, call.callee, "print") and call.args.len == 1 and call.args[0].* == .interpolated_string) {
+                    try self.genExpr(call.args[0]);
                 }
-                try self.write(")");
+                else {
+                    try self.writeFmt("{s}(", .{call.callee});
+                    for (call.args, 0..) |arg, i| {
+                        if (i > 0) {
+                            try self.write(", ");
+                        }
+                        try self.genExpr(arg);
+                    }
+                    try self.write(")");
+                }
             },
-            .interpolated_string => {
-                @panic("interpolated strings not implemented");
+            .interpolated_string => |interp| {
+                var has_expr = false;
+                for (interp.parts) |p| {
+                    if (p == .expr) {
+                        has_expr = true;
+                        break;
+                    }
+                }
+                if (!has_expr) {
+                    try self.write("\"");
+                    for (interp.parts) |p| {
+                        switch (p) {
+                            .text => |text| try self.writeEscapedText(text, false),
+                            .expr => {},
+                        }
+                    }
+                    try self.write("\"");
+                } 
+                else {
+                    try self.write("printf(\"");
+                    for (interp.parts) |p| {
+                        switch (p) {
+                            .text => |text| try self.writeEscapedText(text, true),
+                            .expr => |ex| try self.write(getFormatSpecifier(self.inferExprType(ex))),
+                        }
+                    }
+                    try self.write("\"");
+                    for (interp.parts) |p| {
+                        switch (p) {
+                            .text => {},
+                            .expr => |e| {
+                                try self.write(", ");
+                                if (self.inferExprType(e) == .Bool) {
+                                    try self.write("(");
+                                    try self.genExpr(e);
+                                    try self.write(" ? \"true\" : \"false\")");
+                                } 
+                                else {
+                                    try self.genExpr(e);
+                                }
+                            },
+                        }
+                    }
+                    try self.write(")");
+                }
             },
         }
     }
@@ -93,6 +144,7 @@ pub const CodeGen = struct {
                 try self.write(";\n");
             },
             .var_decl => |d| {
+                try self.symbol_types.put(d.name, d.ty);
                 try self.writeIndent();
                 try self.write(mapType(d.ty));
                 try self.writeFmt(" {s}", .{d.name});
@@ -179,6 +231,7 @@ pub const CodeGen = struct {
                 try self.write(mapType(func.return_type));
                 try self.writeFmt(" {s}(", .{func.name});
                 for (func.params, 0..) |param, idx| {
+                    try self.symbol_types.put(param.name, param.ty);
                     if (idx > 0) {
                         try self.write(", ");
                     }
@@ -228,6 +281,36 @@ pub const CodeGen = struct {
             else => "",
         };
     }
+    fn inferExprType(self: *CodeGen, expr: *ast.Expr) lexer.TypeKind {
+        return switch (expr.*) {
+            .literal => |lit| switch (lit.value) {
+                .number => .Int,
+                .string => .String,
+                .boolean => .Bool,
+            },
+            .variable => |v| self.symbol_types.get(v.name) orelse .Int,
+            .binary => |b| switch (b.op) {
+                .equality, .inequality, .lessthan, .greaterthan, .lessthan_equal, .greaterthan_equal => .Bool,
+                else => .Int,
+            },
+            .unary => |u| switch (u.op) {
+                .minus, .plus => .Int,
+                else => .Int,
+            },
+            .index => |idx| self.symbol_types.get(idx.array) orelse .Int,
+            .interpolated_string => .String,
+            .call => .Int
+        };
+    }
+    fn getFormatSpecifier(ty: lexer.TypeKind) []const u8 {
+        return switch (ty) {
+            .Int => "%ld",
+            .String => "%s",
+            .Bool => "%s",
+            .void_ => "%s",
+        };
+    }
+
     fn write(self: *CodeGen, bytes: []const u8) !void {
         try self.output.appendSlice(self.allocator, bytes);
     }
@@ -235,6 +318,26 @@ pub const CodeGen = struct {
         const text = try std.fmt.allocPrint(self.allocator, fmt, args);
         defer self.allocator.free(text);
         try self.output.appendSlice(self.allocator, text);
+    }
+    fn writeEscapedText(self: *CodeGen, text: []const u8, is_format_string: bool) !void {
+        var i: usize = 0;
+        while (i < text.len) : (i += 1) {
+            const c = text[i];
+            if (c == '%' and is_format_string) {
+                try self.write("%%");
+            } 
+            else if (c == '"') {
+                if (i == 0 or text[i - 1] != '\\') {
+                    try self.write("\\\"");
+                } 
+                else {
+                    try self.writeFmt("{c}", .{c});
+                }
+            } 
+            else {
+                try self.writeFmt("{c}", .{c});
+            }
+        }
     }
     fn writeIndent(self: *CodeGen) !void {
         for (0..self.indentation) |_| {
