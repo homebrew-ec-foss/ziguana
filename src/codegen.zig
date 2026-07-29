@@ -228,7 +228,11 @@ pub const CodeGen = struct {
             },
             .func_decl => |func| {
                 try self.writeIndent();
-                try self.write(mapType(func.return_type));
+                if (std.mem.eql(u8, func.name, "main")) {
+                    try self.write("int");
+                } else {
+                    try self.write(mapType(func.return_type));
+                }
                 try self.writeFmt(" {s}(", .{func.name});
                 for (func.params, 0..) |param, idx| {
                     try self.symbol_types.put(param.name, param.ty);
@@ -243,8 +247,8 @@ pub const CodeGen = struct {
             },
             .program => |stmts| {
                 try self.write("#include <stdio.h>\n");
-                try self.write("#include <stdbool.h>\n");
-                try self.write("#include <stdint.h>\n\n");
+                try self.write("#include <stdint.h>\n");
+                try self.write("#include <inttypes.h>\n\n");
                 for (stmts) |stm| {
                     try self.genStmt(stm);
                 }
@@ -304,7 +308,7 @@ pub const CodeGen = struct {
     }
     fn getFormatSpecifier(ty: lexer.TypeKind) []const u8 {
         return switch (ty) {
-            .Int => "%ld",
+            .Int => "%\" PRId64 \"",
             .String => "%s",
             .Bool => "%s",
             .void_ => "%s",

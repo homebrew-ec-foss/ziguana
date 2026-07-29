@@ -90,6 +90,7 @@ pub fn main(init: std.process.Init) !void {
         const result = try std.process.run(arena, io, .{
             .argv = &.{
                 "gcc",
+                "-std=c23",
                 c_file,
                 "-o",
                 args.executable,
