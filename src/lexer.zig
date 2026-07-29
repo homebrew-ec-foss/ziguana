@@ -194,31 +194,30 @@ pub const Lexer = struct {
                 return self.input[start..self.position];
             }
 
-            if (self.ch == '\\') {
-                const esc_line = self.line;
-                const esc_col = self.column;
+            if (self.ch == '\\') { //patch-below lines are commented so `\x`is valid
+                // const esc_line = self.line;
+                // const esc_col = self.column;
 
                 self.readChar();
 
-                if (self.ch != 'n' and self.ch != 't' and self.ch != 'r' and self.ch != '"' and self.ch != '\\') {
-                    self.string_error = "Invalid escape sequence";
-                    self.string_error_line = esc_line;
-                    self.string_error_column = esc_col;
+                //if (self.ch != 'n' and self.ch != 't' and self.ch != 'r' and self.ch != '"' and self.ch != '\\') {
+                //self.string_error = "Invalid escape sequence";
+                //self.string_error_line = esc_line;
+                //self.string_error_column = esc_col;
 
-                    if (self.ch != 0) {
-                        self.readChar();
-                    }
-
-                    self.mode = lexerMode.normal_state;
-                    return self.input[start..self.position];
+                if (self.ch != 0) {
+                    self.readChar();
                 }
-            }
+                continue;
 
+                //self.mode = lexerMode.normal_state;
+                //return self.input[start..self.position];
+            }
             self.readChar();
         }
-
         return self.input[start..self.position];
     }
+
     pub fn readIdentifier(self: *Lexer) []const u8 {
         const start: usize = self.position;
         while (std.ascii.isDigit(self.ch) or std.ascii.isAlphabetic(self.ch) or self.ch == '_') {
@@ -492,7 +491,7 @@ pub const Lexer = struct {
                 continue;
             }
             if (c == '"') return true;
-            if (c == ';' or c == '\n') return false;
+            if (c == '\n') return false;
             i += 1;
         }
         return false;
