@@ -434,3 +434,64 @@ test "array literal with expressions" {
     try expectEqual(.binary, tag(init.array_literal[1].*));
     try expectEqual(.call, tag(init.array_literal[2].*));
 }
+//negative tests (only these ones are in the scope for parser error handling i.e. simple syntax errors, others like type checking for example will be in checker tests)
+test "missing semicolon in variable declaration" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedToken, lexnparse(arena.allocator(), "int x = 5"));
+}
+test "missing closing paren" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedToken, lexnparse(arena.allocator(), "int x = (1 + 2;"));
+}
+test "missing closing brace" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedToken, lexnparse(arena.allocator(), "if(true){int x = 1;"));
+}
+test "assignment missing value" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedExpression, lexnparse(arena.allocator(), "x = ;"));
+}
+test "missing parameter identifier" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedIdentifier, lexnparse(arena.allocator(), "fn int test(int){return 0;}"));
+}
+test "missing condition" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedExpression, lexnparse(arena.allocator(), "if(){int x = 1;}"));
+}
+test "missing assign in array" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedExpression, lexnparse(arena.allocator(), "int[2] a = {1,};"));
+}
+test "missing closing brace in array" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedToken, lexnparse(arena.allocator(), "int[3] a = {1,2,3;"));
+}
+test "missing array size" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedToken, lexnparse(arena.allocator(), "int[] array;"));
+}
+test "missing closing bracket in array" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedToken, lexnparse(arena.allocator(), "int[10 a;"));
+}
+test "missing comma in function parameters" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedToken, lexnparse(arena.allocator(), "fn int test(int a int b){return 0;}"));
+}
+test "missing comma in function call arguments" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    try std.testing.expectError(error.ExpectedToken, lexnparse(arena.allocator(), "int x = test(1 2);"));
+}

@@ -14,7 +14,6 @@ pub fn build(b: *std.Build) void {
     parser_module.addImport("lexer", lexer_module);
     parser_module.addImport("ast", ast_module);
     checker_module.addImport("lexer", lexer_module);
-    checker_module.addImport("parser", parser_module);
     checker_module.addImport("ast", ast_module);
     ast_printer_module.addImport("lexer", lexer_module);
     ast_printer_module.addImport("parser", parser_module);
@@ -39,9 +38,16 @@ pub fn build(b: *std.Build) void {
     parser_tests.root_module.addImport("lexer", lexer_module);
     parser_tests.root_module.addImport("ast", ast_module);
     parser_tests.root_module.addImport("parser", parser_module);
+    const checker_tests = b.addTest(.{ .root_module = b.createModule(.{ .root_source_file = b.path("tests/checkertest.zig"), .target = target, .optimize = optimize }) });
+    checker_tests.root_module.addImport("lexer", lexer_module);
+    checker_tests.root_module.addImport("ast", ast_module);
+    checker_tests.root_module.addImport("parser", parser_module);
+    checker_tests.root_module.addImport("checker", checker_module);
     const run_lexer_tests = b.addRunArtifact(lexer_tests);
     const run_parser_tests = b.addRunArtifact(parser_tests);
+    const run_checker_tests = b.addRunArtifact(checker_tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lexer_tests.step);
     test_step.dependOn(&run_parser_tests.step);
+    test_step.dependOn(&run_checker_tests.step);
 }
