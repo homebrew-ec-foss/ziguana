@@ -430,20 +430,9 @@ pub const Lexer = struct {
 
         // Identifiers, Numbers etc -
         if (self.ch == '"') {
-            if (self.in_interpolation == true) {
-                self.in_interpolation = false;
-                self.readChar();
-                self.mode = lexerMode.normal_state;
-                return Token{ .payload = .{ .invalid = "Unterminated interpolation - missing }" }, .line = start_line, .column = start_col };
-            } else {
-                if (!self.hasClosingQuote()) {
-                    self.readChar();
-                    return Token{ .payload = .{ .invalid = "Unterminated string literal - missing closing \"" }, .line = start_line, .column = start_col };
-                }
-                self.readChar();
-                self.mode = lexerMode.string_state;
-                return Token{ .payload = .{ .string_start = {} }, .line = start_line, .column = start_col };
-            }
+            self.readChar();
+            self.mode = lexerMode.string_state;
+            return Token{ .payload = .{ .string_start = {} }, .line = start_line, .column = start_col };
         }
         if (std.ascii.isDigit(self.ch)) {
             const numberValue: i64 = self.readNumber();
