@@ -1,9 +1,10 @@
 const std = @import("std");
 const lexerMod = @import("lexer");
-const fetcher = @import("fetcher.zig");
+const fetcher = @import("fetcher");
 const parser = @import("parser");
-const cli = @import("cli.zig");
+const cli = @import("cli");
 const astprinter = @import("astprinter");
+const codegen = @import("codegen");
 fn printToken(tok: lexerMod.Token) void {
     switch (tok.payload) {
         .identifier => |s| std.debug.print("{d}:{d} identifier(\"{s}\")\n", .{ tok.line, tok.column, s }),
@@ -24,7 +25,7 @@ pub fn main(init: std.process.Init) !void {
 
     const source = try fetcher.readSource(io, arena, args.path);
 
-    var lex = lexer.Lexer.init(source);
+    var lex = lexerMod.Lexer.init(source);
     const tokens = try lex.lex(arena);
 
     if (args.token_print) {

@@ -10,6 +10,7 @@ pub fn build(b: *std.Build) void {
     const ast_printer_module = b.createModule(.{ .root_source_file = b.path("src/astprinter.zig"), .target = target, .optimize = optimize });
     const cli_module = b.createModule(.{ .root_source_file = b.path("src/cli.zig"), .target = target, .optimize = optimize });
     const fetcher_module = b.createModule(.{ .root_source_file = b.path("src/fetcher.zig"), .target = target, .optimize = optimize });
+    const codegen_module = b.createModule(.{ .root_source_file = b.path("src/codegen.zig"), .target = target, .optimize = optimize });
     ast_module.addImport("lexer", lexer_module);
     parser_module.addImport("lexer", lexer_module);
     parser_module.addImport("ast", ast_module);
@@ -18,6 +19,8 @@ pub fn build(b: *std.Build) void {
     ast_printer_module.addImport("lexer", lexer_module);
     ast_printer_module.addImport("parser", parser_module);
     ast_printer_module.addImport("ast", ast_module);
+    codegen_module.addImport("lexer", lexer_module);
+    codegen_module.addImport("ast", ast_module);
     const exe = b.addExecutable(.{ .name = "ziguana", .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }) });
     exe.root_module.addImport("lexer", lexer_module);
     exe.root_module.addImport("ast", ast_module);
@@ -26,6 +29,7 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("astprinter", ast_printer_module);
     exe.root_module.addImport("cli", cli_module);
     exe.root_module.addImport("fetcher", fetcher_module);
+    exe.root_module.addImport("codegen", codegen_module);
     b.installArtifact(exe);
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());

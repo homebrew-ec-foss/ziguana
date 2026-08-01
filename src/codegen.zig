@@ -1,6 +1,6 @@
 const std = @import("std");
-const ast = @import("ast.zig");
-const lexer = @import("lexer.zig");
+const ast = @import("ast");
+const lexer = @import("lexer");
 const TokenTag = lexer.TokenTag;
 const TypeKind = lexer.TypeKind;
 
@@ -55,8 +55,7 @@ pub const CodeGen = struct {
             .call => |call| {
                 if (std.mem.eql(u8, call.callee, "print") and call.args.len == 1 and call.args[0].* == .interpolated_string) {
                     try self.genExpr(call.args[0]);
-                }
-                else {
+                } else {
                     try self.writeFmt("{s}(", .{call.callee});
                     for (call.args, 0..) |arg, i| {
                         if (i > 0) {
@@ -84,8 +83,7 @@ pub const CodeGen = struct {
                         }
                     }
                     try self.write("\"");
-                } 
-                else {
+                } else {
                     try self.write("printf(\"");
                     for (interp.parts) |p| {
                         switch (p) {
@@ -103,8 +101,7 @@ pub const CodeGen = struct {
                                     try self.write("(");
                                     try self.genExpr(e);
                                     try self.write(" ? \"true\" : \"false\")");
-                                } 
-                                else {
+                                } else {
                                     try self.genExpr(e);
                                 }
                             },
@@ -303,7 +300,7 @@ pub const CodeGen = struct {
             },
             .index => |idx| self.symbol_types.get(idx.array) orelse .Int,
             .interpolated_string => .String,
-            .call => .Int
+            .call => .Int,
         };
     }
     fn getFormatSpecifier(ty: lexer.TypeKind) []const u8 {
@@ -329,16 +326,13 @@ pub const CodeGen = struct {
             const c = text[i];
             if (c == '%' and is_format_string) {
                 try self.write("%%");
-            } 
-            else if (c == '"') {
+            } else if (c == '"') {
                 if (i == 0 or text[i - 1] != '\\') {
                     try self.write("\\\"");
-                } 
-                else {
+                } else {
                     try self.writeFmt("{c}", .{c});
                 }
-            } 
-            else {
+            } else {
                 try self.writeFmt("{c}", .{c});
             }
         }
