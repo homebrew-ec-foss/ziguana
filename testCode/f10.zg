@@ -1,0 +1,6 @@
+fn int main(){
+  int x=10;
+  print("x is {x}");
+  print("{ "some string" }");
+  return 007;
+}

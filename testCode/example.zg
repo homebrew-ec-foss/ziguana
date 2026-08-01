@@ -1,0 +1,9 @@
+fn int main(){
+  int a=10;
+  int b=20;
+  int c=5;
+  int d=a+b*c;
+  if(d>0){
+    return d;
+  }
+}
