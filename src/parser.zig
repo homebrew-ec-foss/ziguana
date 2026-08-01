@@ -1,6 +1,6 @@
-const ast = @import("ast.zig");
+const ast = @import("ast");
 const std = @import("std");
-const lexer = @import("lexer.zig");
+const lexer = @import("lexer");
 
 const Token = lexer.Token;
 const TokenTag = lexer.TokenTag;
@@ -158,6 +158,7 @@ pub const Parser = struct {
             .if_ => self.parseIfStatement(),
             .while_ => self.parseWhileStatement(),
             .return_ => self.parseReturnStatement(),
+            .lbrace => self.parseBlock(), //patch for blocks
             .identifier => blk: {
                 const after = self.peekNext();
                 break :blk switch (getTag(after)) {

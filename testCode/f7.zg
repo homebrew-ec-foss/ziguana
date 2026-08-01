@@ -1,7 +1,6 @@
 fn int main(){
   int x=10;
   if(x>10){
-    return x;//raises an error as x<10 case is not handled
+    return x;
   }
-  //return 1;
 }
