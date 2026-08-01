@@ -194,31 +194,30 @@ pub const Lexer = struct {
                 return self.input[start..self.position];
             }
 
-            if (self.ch == '\\') {
-                const esc_line = self.line;
-                const esc_col = self.column;
+            if (self.ch == '\\') { //patch-below lines are commented so `\x`is valid
+                // const esc_line = self.line;
+                // const esc_col = self.column;
 
                 self.readChar();
 
-                if (self.ch != 'n' and self.ch != 't' and self.ch != 'r' and self.ch != '"' and self.ch != '\\') {
-                    self.string_error = "Invalid escape sequence";
-                    self.string_error_line = esc_line;
-                    self.string_error_column = esc_col;
+                //if (self.ch != 'n' and self.ch != 't' and self.ch != 'r' and self.ch != '"' and self.ch != '\\') {
+                //self.string_error = "Invalid escape sequence";
+                //self.string_error_line = esc_line;
+                //self.string_error_column = esc_col;
 
-                    if (self.ch != 0) {
-                        self.readChar();
-                    }
-
-                    self.mode = lexerMode.normal_state;
-                    return self.input[start..self.position];
+                if (self.ch != 0) {
+                    self.readChar();
                 }
-            }
+                continue;
 
+                //self.mode = lexerMode.normal_state;
+                //return self.input[start..self.position];
+            }
             self.readChar();
         }
-
         return self.input[start..self.position];
     }
+
     pub fn readIdentifier(self: *Lexer) []const u8 {
         const start: usize = self.position;
         while (std.ascii.isDigit(self.ch) or std.ascii.isAlphabetic(self.ch) or self.ch == '_') {
@@ -431,16 +430,9 @@ pub const Lexer = struct {
 
         // Identifiers, Numbers etc -
         if (self.ch == '"') {
-            if (self.in_interpolation == true) {
-                self.in_interpolation = false;
-                self.readChar();
-                self.mode = lexerMode.normal_state;
-                return Token{ .payload = .{ .invalid = "Unterminated interpolation - missing }" }, .line = start_line, .column = start_col };
-            } else {
-                self.readChar();
-                self.mode = lexerMode.string_state;
-                return Token{ .payload = .{ .string_start = {} }, .line = start_line, .column = start_col };
-            }
+            self.readChar();
+            self.mode = lexerMode.string_state;
+            return Token{ .payload = .{ .string_start = {} }, .line = start_line, .column = start_col };
         }
         if (std.ascii.isDigit(self.ch)) {
             const numberValue: i64 = self.readNumber();
@@ -477,5 +469,20 @@ pub const Lexer = struct {
             }
         }
         return tokens;
+    }
+
+    pub fn hasClosingQuote(self: *Lexer) bool {
+        var i = self.position + 1;
+        while (i < self.input.len) {
+            const c = self.input[i];
+            if (c == '\\') {
+                i += 2;
+                continue;
+            }
+            if (c == '"') return true;
+            if (c == '\n') return false;
+            i += 1;
+        }
+        return false;
     }
 };

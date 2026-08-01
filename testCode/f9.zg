@@ -1,0 +1,8 @@
+fn int main(){
+  int x=10;
+  {
+    int b=90;
+  }
+  print("b is {b}");
+  return 6769;
+}
