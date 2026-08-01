@@ -86,13 +86,14 @@ pub fn main(init: std.process.Init) !void {
     try writer.interface.flush();
 
     if (!args.emit_c) {
+        const output_name = if (args.executable.len == 0) "a.out" else args.executable;
         const result = try std.process.run(arena, io, .{
             .argv = &.{
                 "gcc",
                 "-std=c23",
                 c_file,
                 "-o",
-                args.executable,
+                output_name,
             },
         });
 
