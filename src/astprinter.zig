@@ -293,6 +293,14 @@ pub const Printer = struct {
             .lessthan_equal => "<=",
             .greaterthan => ">",
             .greaterthan_equal => ">=",
+            .and_ => "&",
+            .or_ => "|",
+            .xor_ => "^",
+            .not => "~",
+            .logical_and => "&&",
+            .logical_or => "||",
+            .left_shift => "<<",
+            .right_shift => ">>",
             else => "unknown",
         };
     }

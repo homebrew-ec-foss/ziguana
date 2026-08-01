@@ -59,6 +59,14 @@ pub const TokenTag = enum {
     interpolation_start,
     interpolation_end,
     string_segment,
+    and_,
+    or_,
+    xor_,
+    not,
+    left_shift,
+    right_shift,
+    logical_and,
+    logical_or,
 };
 
 pub const TokenPayload = union(TokenTag) {
@@ -107,6 +115,14 @@ pub const TokenPayload = union(TokenTag) {
     interpolation_start: void,
     interpolation_end: void,
     string_segment: []const u8,
+    and_: void,
+    or_: void,
+    xor_: void,
+    not: void,
+    left_shift: void,
+    right_shift: void,
+    logical_and: void,
+    logical_or: void,
 };
 
 pub const Token = struct {
@@ -416,6 +432,11 @@ pub const Lexer = struct {
                 self.readChar();
                 return Token{ .payload = .{ .lessthan_equal = {} }, .line = start_line, .column = start_col };
             }
+            if (self.peekChar() == '<') {
+                self.readChar();
+                self.readChar();
+                return Token{ .payload = .{ .left_shift = {} }, .line = start_line, .column = start_col };
+            }
             self.readChar();
             return Token{ .payload = .{ .lessthan = {} }, .line = start_line, .column = start_col };
         }
@@ -425,8 +446,39 @@ pub const Lexer = struct {
                 self.readChar();
                 return Token{ .payload = .{ .greaterthan_equal = {} }, .line = start_line, .column = start_col };
             }
+            if (self.peekChar() == '>') {
+                self.readChar();
+                self.readChar();
+                return Token{ .payload = .{ .right_shift = {} }, .line = start_line, .column = start_col };
+            }
             self.readChar();
             return Token{ .payload = .{ .greaterthan = {} }, .line = start_line, .column = start_col };
+        }
+        if (self.ch == '&') {
+            if (self.peekChar() == '&') {
+                self.readChar();
+                self.readChar();
+                return Token{ .payload = .{ .logical_and = {} }, .line = start_line, .column = start_col };
+            }
+            self.readChar();
+            return Token{ .payload = .{ .and_ = {} }, .line = start_line, .column = start_col };
+        }
+        if (self.ch == '|') {
+            if (self.peekChar() == '|') {
+                self.readChar();
+                self.readChar();
+                return Token{ .payload = .{ .logical_or = {} }, .line = start_line, .column = start_col };
+            }
+            self.readChar();
+            return Token{ .payload = .{ .or_ = {} }, .line = start_line, .column = start_col };
+        }
+        if (self.ch == '^') {
+            self.readChar();
+            return Token{ .payload = .{ .xor_ = {} }, .line = start_line, .column = start_col };
+        }
+        if (self.ch == '~') {
+            self.readChar();
+            return Token{ .payload = .{ .not = {} }, .line = start_line, .column = start_col };
         }
 
         // Identifiers, Numbers etc -

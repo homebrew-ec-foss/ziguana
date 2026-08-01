@@ -1,4 +1,23 @@
 fn int main(){
   print("Hello World");
+  int a = 10;
+  int b = 3;
+
+  if ((a & b) > 0){
+    print("Bitwise AND worked");
+  }
+
+  if (a > 5 && b < 5){
+    print("Logical AND worked");
+  }
+
+  if ((a | b) > 0){
+    print("Bitwise OR worked");
+  }
+
+  if (a > 100 || b < 5){
+    print("Logical OR worked");
+  }
+
   return 1;
 }

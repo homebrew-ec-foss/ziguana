@@ -294,9 +294,10 @@ pub const Checker = struct {
             .unary => |u| blk: {
                 const operand_ty = try self.checkExpr(u.operand);
                 break :blk switch (u.op) {
-                    .minus, .plus => ty: {
+                    .minus, .plus, .not => ty: {
                         if (operand_ty != .Int) {
-                            try self.addError(u.line, u.column, "unary {s} requires int operand, got {s}", .{ if (u.op == .minus) "-" else "+", @tagName(operand_ty) });
+                            const sym: []const u8 = if (u.op == .minus) "-" else if (u.op == .plus) "+" else "~";
+                            try self.addError(u.line, u.column, "unary {s} requires int operand, got {s}", .{ sym, @tagName(operand_ty) });
                         }
                         break :ty .Int;
                     },
@@ -401,6 +402,18 @@ pub const Checker = struct {
             .equality, .inequality => blk: {
                 if (lty != rty) {
                     try self.addError(line, column, "cannot compare {s} with {s}", .{ @tagName(lty), @tagName(rty) });
+                }
+                break :blk .Bool;
+            },
+            .and_, .or_, .xor_, .right_shift, .left_shift => blk: {
+                if (lty != .Int or rty != .Int) {
+                    try self.addError(line, column, "bitwise operator requires int operands, got {s} and {s}", .{ @tagName(lty), @tagName(rty) });
+                }
+                break :blk .Int;
+            },
+            .logical_and, .logical_or => blk: {
+                if (lty != .Bool or rty != .Bool) {
+                    try self.addError(line, column, "logical operator requires bool operands, got {s} and {s}", .{ @tagName(lty), @tagName(rty) });
                 }
                 break :blk .Bool;
             },
