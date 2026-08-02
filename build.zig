@@ -11,6 +11,7 @@ pub fn build(b: *std.Build) void {
     const cli_module = b.createModule(.{ .root_source_file = b.path("src/cli.zig"), .target = target, .optimize = optimize });
     const fetcher_module = b.createModule(.{ .root_source_file = b.path("src/fetcher.zig"), .target = target, .optimize = optimize });
     const codegen_module = b.createModule(.{ .root_source_file = b.path("src/codegen.zig"), .target = target, .optimize = optimize });
+    const ziguana_module = b.createModule(.{ .root_source_file = b.path("src/ziguana.zig"), .target = target, .optimize = optimize });
     ast_module.addImport("lexer", lexer_module);
     parser_module.addImport("lexer", lexer_module);
     parser_module.addImport("ast", ast_module);
@@ -21,6 +22,14 @@ pub fn build(b: *std.Build) void {
     ast_printer_module.addImport("ast", ast_module);
     codegen_module.addImport("lexer", lexer_module);
     codegen_module.addImport("ast", ast_module);
+    ziguana_module.addImport("lexer", lexer_module);
+    ziguana_module.addImport("ast", ast_module);
+    ziguana_module.addImport("parser", parser_module);
+    ziguana_module.addImport("checker", checker_module);
+    ziguana_module.addImport("codegen", codegen_module);
+    ziguana_module.addImport("astprinter", ast_printer_module);
+    ziguana_module.addImport("cli", cli_module);
+    ziguana_module.addImport("fetcher", fetcher_module);
     const exe = b.addExecutable(.{ .name = "ziguana", .root_module = b.createModule(.{ .root_source_file = b.path("src/main.zig"), .target = target, .optimize = optimize }) });
     exe.root_module.addImport("lexer", lexer_module);
     exe.root_module.addImport("ast", ast_module);
@@ -47,11 +56,15 @@ pub fn build(b: *std.Build) void {
     checker_tests.root_module.addImport("ast", ast_module);
     checker_tests.root_module.addImport("parser", parser_module);
     checker_tests.root_module.addImport("checker", checker_module);
+    const codegen_tests = b.addTest(.{ .root_module = b.createModule(.{ .root_source_file = b.path("tests/codegentest.zig"), .target = target, .optimize = optimize }) });
+    codegen_tests.root_module.addImport("ziguana", ziguana_module);
     const run_lexer_tests = b.addRunArtifact(lexer_tests);
     const run_parser_tests = b.addRunArtifact(parser_tests);
     const run_checker_tests = b.addRunArtifact(checker_tests);
+    const run_codegen_tests = b.addRunArtifact(codegen_tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lexer_tests.step);
     test_step.dependOn(&run_parser_tests.step);
     test_step.dependOn(&run_checker_tests.step);
+    test_step.dependOn(&run_codegen_tests.step);
 }
