@@ -1,5 +1,0 @@
-fn int main() {
-    int a = 6;
-    string s = "{a}";
-    return 0;
-}

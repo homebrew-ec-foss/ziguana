@@ -53,8 +53,34 @@ pub const CodeGen = struct {
                 try self.write("]");
             },
             .call => |call| {
-                if (std.mem.eql(u8, call.callee, "print") and call.args.len == 1 and call.args[0].* == .interpolated_string) {
-                    try self.genExpr(call.args[0]);
+                if (std.mem.eql(u8, call.callee, "print") and call.args.len == 1) {
+                    if (call.args[0].* == .interpolated_string) {
+                        var has_expr = false;
+                        for (call.args[0].interpolated_string.parts) |p| {
+                            if (p == .expr) {
+                                has_expr = true;
+                                break;
+                            }
+                        }
+                        if (has_expr) {
+                            try self.genExpr(call.args[0]);
+                        } else {
+                            try self.write("printf(\"%s\\n\", \"");
+                            for (call.args[0].interpolated_string.parts) |p| {
+                                switch (p) {
+                                    .text => |text| try self.writeEscapedText(text, false),
+                                    .expr => {},
+                                }
+                            }
+                            try self.write("\")");
+                        }
+                    } else if (call.args[0].* == .literal) {
+                        if (call.args[0].literal.value == .string) {
+                            try self.write("printf(\"%s\\n\", ");
+                            try self.genExpr(call.args[0]);
+                            try self.write(")");
+                        }
+                    }
                 } else {
                     try self.writeFmt("{s}(", .{call.callee});
                     for (call.args, 0..) |arg, i| {
@@ -326,12 +352,16 @@ pub const CodeGen = struct {
             const c = text[i];
             if (c == '%' and is_format_string) {
                 try self.write("%%");
-            } else if (c == '"') {
-                if (i == 0 or text[i - 1] != '\\') {
-                    try self.write("\\\"");
+            } else if (c == '\\' and i + 1 < text.len) {
+                const next = text[i + 1];
+                if (next == '{' or next == '}' or next == '"' or next == '\\' or next == 'n' or next == 't' or next == 'r') {
+                    if (next == 'n') try self.write("\\n") else if (next == 't') try self.write("\\t") else if (next == 'r') try self.write("\\r") else if (next == '"') try self.write("\\\"") else if (next == '\\') try self.write("\\\\") else try self.writeFmt("{c}", .{next});
+                    i += 1;
                 } else {
                     try self.writeFmt("{c}", .{c});
                 }
+            } else if (c == '"') {
+                try self.write("\\\"");
             } else {
                 try self.writeFmt("{c}", .{c});
             }
