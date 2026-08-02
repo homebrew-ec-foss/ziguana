@@ -56,7 +56,7 @@ pub fn build(b: *std.Build) void {
     checker_tests.root_module.addImport("ast", ast_module);
     checker_tests.root_module.addImport("parser", parser_module);
     checker_tests.root_module.addImport("checker", checker_module);
-    const codegen_tests = b.addTest(.{ .root_module = b.createModule(.{ .root_source_file = b.path("tests/codegentest.zig"), .target = target, .optimize = optimize }) });
+    const codegen_tests = b.addTest(.{ .root_module = b.createModule(.{ .root_source_file = b.path("tests/codegenTest.zig"), .target = target, .optimize = optimize }) });
     codegen_tests.root_module.addImport("ziguana", ziguana_module);
     const run_lexer_tests = b.addRunArtifact(lexer_tests);
     const run_parser_tests = b.addRunArtifact(parser_tests);
