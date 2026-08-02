@@ -355,7 +355,13 @@ pub const CodeGen = struct {
             } else if (c == '\\' and i + 1 < text.len) {
                 const next = text[i + 1];
                 if (next == '{' or next == '}' or next == '"' or next == '\\' or next == 'n' or next == 't' or next == 'r') {
-                    if (next == 'n') try self.write("\\n") else if (next == 't') try self.write("\\t") else if (next == 'r') try self.write("\\r") else if (next == '"') try self.write("\\\"") else if (next == '\\') try self.write("\\\\") else try self.writeFmt("{c}", .{next});
+                    switch (next) {
+                        'n' => try self.write("\\n"),
+                        't' => try self.write("\\t"),
+                        'r' => try self.write("\\r"),
+                        '"' => try self.write("\\\""),
+                        else => try self.writeFmt("{c}", .{next}),
+                    }
                     i += 1;
                 } else {
                     try self.writeFmt("{c}", .{c});
