@@ -1,10 +1,10 @@
 const std = @import("std");
-const lexerMod = @import("lexer.zig");
-const fetcher = @import("fetcher.zig");
-const parser = @import("parser.zig");
-const cli = @import("cli.zig");
-const astprinter = @import("astprinter.zig");
-const codegen = @import("codegen.zig");
+const lexerMod = @import("lexer");
+const fetcher = @import("fetcher");
+const parser = @import("parser");
+const cli = @import("cli");
+const astprinter = @import("astprinter");
+const codegen = @import("codegen");
 fn printToken(tok: lexerMod.Token) void {
     switch (tok.payload) {
         .identifier => |s| std.debug.print("{d}:{d} identifier(\"{s}\")\n", .{ tok.line, tok.column, s }),
@@ -25,8 +25,8 @@ pub fn main(init: std.process.Init) !void {
 
     const source = try fetcher.readSource(io, arena, args.path);
 
-    var lexer = lexerMod.Lexer.init(source);
-    const tokens = try lexer.lex(arena);
+    var lex = lexerMod.Lexer.init(source);
+    const tokens = try lex.lex(arena);
 
     if (args.token_print) {
         for (tokens.items) |tok| {
@@ -51,7 +51,7 @@ pub fn main(init: std.process.Init) !void {
         try printer.printAst(program);
     }
 
-    var checker = @import("checker.zig").Checker.init(arena);
+    var checker = @import("checker").Checker.init(arena);
     try checker.check(program);
 
     if (checker.errors.items.len > 0) {
@@ -87,12 +87,14 @@ pub fn main(init: std.process.Init) !void {
     try writer.interface.flush();
 
     if (!args.emit_c) {
+        const output_name = if (args.executable.len == 0) "a.out" else args.executable;
         const result = try std.process.run(arena, io, .{
             .argv = &.{
                 "gcc",
+                "-std=c23",
                 c_file,
                 "-o",
-                args.executable,
+                output_name,
             },
         });
 

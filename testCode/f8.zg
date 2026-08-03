@@ -1,0 +1,4 @@
+fn void main(){
+  string s="Hello \"text\" !Hello world ;;;;; \ \ \ \ \ \ \ \p \a \h \ ";
+  print(" Hello/;;this is test;;should work ( \ \f ");
+}
