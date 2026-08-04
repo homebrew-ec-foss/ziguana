@@ -1,0 +1,12 @@
+struct student {
+    string name;
+    int roll;
+};
+
+fn int main() {
+    student s;
+    s.name = "Tilde";
+    s.roll = 5;
+    print("{s.name} - {s.roll}");
+    return 0;
+}
