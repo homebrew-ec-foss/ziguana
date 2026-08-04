@@ -1,10 +1,11 @@
 const std = @import("std");
-const lexerMod = @import("lexer.zig");
+const lexerMod = @import("lexer");
 const fetcher = @import("fetcher.zig");
-const parser = @import("parser.zig");
+const parser = @import("parser");
 const cli = @import("cli.zig");
-const astprinter = @import("astprinter.zig");
 const checker_mod = @import("checker.zig");
+const astprinter = @import("astprinter");
+
 fn printToken(tok: lexerMod.Token) void {
     switch (tok.payload) {
         .identifier => |s| std.debug.print("{d}:{d} identifier(\"{s}\")\n", .{ tok.line, tok.column, s }),
@@ -86,7 +87,9 @@ pub fn main(init: std.process.Init) !void {
         var printer = astprinter.Printer.init();
         try printer.printAst(program);
     }
+
     var checker = checker_mod.Checker.init(arena);
+
     try checker.check(program);
     if (args.print_checks) {
         if (checker.errors.items.len > 0) {
