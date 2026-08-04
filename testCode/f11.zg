@@ -1,0 +1,15 @@
+fn bool main(){
+  int x="hello";
+  bool t=false;
+  print("x is {y}");
+  {
+    int d=99;
+  }
+  return true;
+}
+
+fn int main(){
+  int x=10;
+  x+=57;
+  print("x is {x}");
+}
