@@ -111,7 +111,7 @@ pub const Checker = struct {
         }
     }
 
-    pub fn check(self: *Self, program: *const Stmt) !void {
+    pub fn check(self: *Self, program: *Stmt) !void {
         std.debug.assert(program.* == .program);
         try self.collectFunctions(program.program);
 
@@ -120,17 +120,28 @@ pub const Checker = struct {
         self.popScope();
     }
 
-    fn checkStmt(self: *Self, stmt: *const Stmt) !void {
+    fn checkStmt(self: *Self, stmt: *Stmt) !void {
         switch (stmt.*) {
             .var_decl => |v| {
                 if (v.ty == .void_) {
                     try self.addError(v.line, v.column, "variable '{s}' cannot have type void", .{v.name});
                 }
+                if (v.ty == .Auto and v.init == null) {
+                    try self.addError(
+                        v.line,
+                        v.column,
+                        "auto variable '{s}' requires an initializer",
+                        .{v.name},
+                    );
+                    return;
+                }
                 if (v.init) |init_val| {
                     switch (init_val) {
                         .expr => |ex| {
                             const ety = try self.checkExpr(ex);
-                            if (ety != v.ty) {
+                            if (v.ty == .Auto) {
+                                stmt.var_decl.ty = ety;
+                            } else if (ety != v.ty) {
                                 try self.addError(
                                     v.line,
                                     v.column,
@@ -154,7 +165,7 @@ pub const Checker = struct {
                         },
                     }
                 }
-                try self.declare(v.name, v.ty, v.array_size != null, v.line, v.column);
+                try self.declare(stmt.var_decl.name, stmt.var_decl.ty, stmt.var_decl.array_size != null, stmt.var_decl.line, stmt.var_decl.column);
             },
 
             .assignment => |a| {
