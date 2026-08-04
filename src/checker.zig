@@ -175,6 +175,10 @@ pub const Checker = struct {
                     try self.addError(a.line, a.column, "assignment to undeclared variable '{s}'", .{a.name});
                     return;
                 };
+                if (a.field != null) {
+                    _ = try self.checkExpr(a.value);
+                    return;
+                }
                 if (a.index) |idx| {
                     if (!sym.is_array) {
                         try self.addError(a.line, a.column, "'{s}' is not an array", .{a.name});
@@ -285,6 +289,7 @@ pub const Checker = struct {
             },
 
             .program => unreachable,
+            .struct_decl => {},
         }
     }
 
@@ -393,6 +398,10 @@ pub const Checker = struct {
                     }
                 }
                 break :blk .String;
+            },
+            .member_access => |m| blk: {
+                _ = try self.checkExpr(m.object);
+                break :blk .Int;
             },
         };
     }

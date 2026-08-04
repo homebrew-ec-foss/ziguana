@@ -27,6 +27,13 @@ pub const Expr = union(enum) {
         line: usize,
         column: usize,
     },
+    member_access: struct {
+        object: *Expr,
+        field: []const u8,
+
+        line: usize,
+        column: usize,
+    },
     binary: struct {
         op: TokenTag, //operator
         left: *Expr,
@@ -78,9 +85,19 @@ pub const Param = struct {
     column: usize,
 };
 
+pub const Field = struct {
+    ty: TypeKind,
+    type_name: ?[]const u8 = null,
+    name: []const u8,
+
+    line: usize,
+    column: usize,
+};
+
 pub const Stmt = union(enum) {
     var_decl: struct {
         ty: TypeKind,
+        type_name: ?[]const u8 = null,
         array_size: ?usize,
         name: []const u8,
         init: ?VarInit,
@@ -89,9 +106,18 @@ pub const Stmt = union(enum) {
         column: usize,
     },
 
+    struct_decl: struct {
+        name: []const u8,
+        fields: []Field,
+
+        line: usize,
+        column: usize,
+    },
+
     assignment: struct {
         name: []const u8,
         index: ?*Expr,
+        field: ?[]const u8 = null, // for structures
         op: TokenTag,
         value: *Expr,
 
@@ -186,15 +212,15 @@ pub fn makeBlock(a: std.mem.Allocator, stmts: []*Stmt) !*Stmt {
     return node;
 }
 
-pub fn makeVarDecl(a: std.mem.Allocator, ty: TypeKind, array_size: ?usize, name: []const u8, init: ?VarInit, line: usize, column: usize) !*Stmt {
+pub fn makeVarDecl(a: std.mem.Allocator, ty: TypeKind, type_name: ?[]const u8, array_size: ?usize, name: []const u8, init: ?VarInit, line: usize, column: usize) !*Stmt {
     const node = try a.create(Stmt);
-    node.* = .{ .var_decl = .{ .ty = ty, .array_size = array_size, .name = name, .init = init, .line = line, .column = column } };
+    node.* = .{ .var_decl = .{ .ty = ty, .type_name = type_name, .array_size = array_size, .name = name, .init = init, .line = line, .column = column } };
     return node;
 }
 
-pub fn makeAssignment(a: std.mem.Allocator, name: []const u8, index: ?*Expr, op: TokenTag, value: *Expr, line: usize, column: usize) !*Stmt {
+pub fn makeAssignment(a: std.mem.Allocator, name: []const u8, field: ?[]const u8, index: ?*Expr, op: TokenTag, value: *Expr, line: usize, column: usize) !*Stmt {
     const node = try a.create(Stmt);
-    node.* = .{ .assignment = .{ .name = name, .index = index, .op = op, .value = value, .line = line, .column = column } };
+    node.* = .{ .assignment = .{ .name = name, .field = field, .index = index, .op = op, .value = value, .line = line, .column = column } };
     return node;
 }
 
@@ -229,5 +255,15 @@ pub fn makeUnary(a: std.mem.Allocator, op: TokenTag, operand: *Expr, line: usize
 pub fn makeInterpolatedString(a: std.mem.Allocator, parts: []InterpPart, line: usize, column: usize) !*Expr {
     const node = try a.create(Expr);
     node.* = .{ .interpolated_string = .{ .parts = parts, .line = line, .column = column } };
+    return node;
+}
+pub fn makeStructDecl(a: std.mem.Allocator, name: []const u8, fields: []Field, line: usize, column: usize) !*Stmt {
+    const node = try a.create(Stmt);
+    node.* = .{ .struct_decl = .{ .name = name, .fields = fields, .line = line, .column = column } };
+    return node;
+}
+pub fn makeMemberAccess(a: std.mem.Allocator, object: *Expr, field: []const u8, line: usize, column: usize) !*Expr {
+    const node = try a.create(Expr);
+    node.* = .{ .member_access = .{ .object = object, .field = field, .line = line, .column = column } };
     return node;
 }

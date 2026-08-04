@@ -9,17 +9,23 @@ pub const CodeGen = struct {
     output: std.ArrayList(u8),
     indentation: usize,
     symbol_types: std.StringHashMap(lexer.TypeKind),
+    symbol_struct_names: std.StringHashMap([]const u8),
+    struct_fields: std.StringHashMap([]const ast.Field),
     pub fn init(allocator: std.mem.Allocator) CodeGen {
         return .{
             .allocator = allocator,
             .output = .empty,
             .indentation = 0,
             .symbol_types = std.StringHashMap(lexer.TypeKind).init(allocator),
+            .symbol_struct_names = std.StringHashMap([]const u8).init(allocator),
+            .struct_fields = std.StringHashMap([]const ast.Field).init(allocator),
         };
     }
     pub fn deinit(self: *CodeGen) void {
         self.output.deinit(self.allocator);
         self.symbol_types.deinit();
+        self.symbol_struct_names.deinit();
+        self.struct_fields.deinit();
     }
     pub fn generate(self: *CodeGen, program: *ast.Stmt) ![]const u8 {
         try self.genStmt(program);
@@ -136,6 +142,11 @@ pub const CodeGen = struct {
                     try self.write(")");
                 }
             },
+            .member_access => |m| {
+                try self.genExpr(m.object);
+                try self.writeFmt(".{s}", .{m.field});
+            },
+
         }
     }
     pub fn genStmt(self: *CodeGen, stmt: *ast.Stmt) !void {
@@ -162,14 +173,25 @@ pub const CodeGen = struct {
                     try self.genExpr(idx);
                     try self.write("]");
                 }
+                else if (assign.field) |f| {
+                    try self.writeFmt(".{s}", .{f});
+                }
                 try self.writeFmt(" {s} ", .{mapOp(assign.op)});
                 try self.genExpr(assign.value);
                 try self.write(";\n");
             },
             .var_decl => |d| {
                 try self.symbol_types.put(d.name, d.ty);
+                if (d.ty == .custom and d.type_name != null) {
+                    try self.symbol_struct_names.put(d.name, d.type_name.?);
+                }
                 try self.writeIndent();
-                try self.write(mapType(d.ty));
+                if (d.ty == .custom) {
+                    try self.write(d.type_name.?);
+                } 
+                else {
+                    try self.write(mapType(d.ty));
+                }
                 try self.writeFmt(" {s}", .{d.name});
                 if (d.array_size) |s| {
                     try self.writeFmt("[{d}]", .{s});
@@ -276,6 +298,24 @@ pub const CodeGen = struct {
                     try self.genStmt(stm);
                 }
             },
+            .struct_decl => |s| {
+                try self.struct_fields.put(s.name, s.fields);
+                try self.writeIndent();
+                try self.writeFmt("typedef struct {{\n", .{});
+                self.addLevel();
+                for (s.fields) |field| {
+                    try self.writeIndent();
+                    if (field.ty == .custom) {
+                        try self.writeFmt("{s} {s};\n", .{ field.type_name.?, field.name });
+                    } 
+                    else {
+                        try self.writeFmt("{s} {s};\n", .{ mapType(field.ty), field.name });
+                    }
+                }
+                self.removeLevel();
+                try self.writeIndent();
+                try self.writeFmt("}} {s};\n\n", .{s.name});
+            },
         }
     }
     fn mapType(ty: TypeKind) []const u8 {
@@ -284,6 +324,7 @@ pub const CodeGen = struct {
             .Bool => "bool",
             .String => "const char*",
             .void_ => "void",
+            .custom => "",
         };
     }
     fn mapOp(op: TokenTag) []const u8 {
@@ -327,6 +368,21 @@ pub const CodeGen = struct {
             .index => |idx| self.symbol_types.get(idx.array) orelse .Int,
             .interpolated_string => .String,
             .call => .Int,
+            .member_access => |m| blk: {
+                if (m.object.* == .variable) {
+                    const var_name = m.object.variable.name;
+                    if (self.symbol_struct_names.get(var_name)) |struct_name| {
+                        if (self.struct_fields.get(struct_name)) |fields| {
+                            for (fields) |field| {
+                                if (std.mem.eql(u8, field.name, m.field)) {
+                                    break :blk field.ty;
+                                }
+                            }
+                        }
+                    }
+                }
+                break :blk .Int;
+            },
         };
     }
     fn getFormatSpecifier(ty: lexer.TypeKind) []const u8 {
@@ -335,6 +391,7 @@ pub const CodeGen = struct {
             .String => "%s",
             .Bool => "%s",
             .void_ => "%s",
+            .custom => "%s",
         };
     }
 

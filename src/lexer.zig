@@ -6,6 +6,7 @@ pub const TypeKind = enum {
     Bool, //B is in Upper-case
     String,
     void_, //fix later
+    custom, // for user defined structure types
 };
 
 pub const lexerMode = enum { //String interpolation using state mode
@@ -59,6 +60,8 @@ pub const TokenTag = enum {
     interpolation_start,
     interpolation_end,
     string_segment,
+    struct_,
+    dot,
 };
 
 pub const TokenPayload = union(TokenTag) {
@@ -107,6 +110,8 @@ pub const TokenPayload = union(TokenTag) {
     interpolation_start: void,
     interpolation_end: void,
     string_segment: []const u8,
+    struct_: void,
+    dot: void,
 };
 
 pub const Token = struct {
@@ -249,6 +254,7 @@ pub const Lexer = struct {
                 .{ "true", TokenPayload{ .true_ = {} } },
                 .{ "false", TokenPayload{ .false_ = {} } },
                 .{ "void", TokenPayload{ .type_ = .void_ } },
+                .{ "struct", TokenPayload{ .struct_ = {} } },
             };
 
         const map = std.StaticStringMap(TokenPayload).initComptime(keywords);
@@ -355,6 +361,10 @@ pub const Lexer = struct {
             ':' => {
                 self.readChar();
                 return Token{ .payload = .{ .colon = {} }, .line = start_line, .column = start_col };
+            },
+            '.' => {
+                self.readChar();
+                return Token{ .payload = .{ .dot = {} }, .line = start_line, .column = start_col };
             },
             else => {},
         }
