@@ -65,7 +65,7 @@ pub const CodeGen = struct {
                         if (has_expr) {
                             try self.genExpr(call.args[0]);
                         } else {
-                            try self.write("printf(\"%s\\n\", \"");
+                            try self.write("printf(\"%s\", \"");
                             for (call.args[0].interpolated_string.parts) |p| {
                                 switch (p) {
                                     .text => |text| try self.writeEscapedText(text, false),
@@ -76,7 +76,7 @@ pub const CodeGen = struct {
                         }
                     } else if (call.args[0].* == .literal) {
                         if (call.args[0].literal.value == .string) {
-                            try self.write("printf(\"%s\\n\", ");
+                            try self.write("printf(\"%s\", ");
                             try self.genExpr(call.args[0]);
                             try self.write(")");
                         }
