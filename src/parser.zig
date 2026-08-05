@@ -254,7 +254,52 @@ pub const Parser = struct {
         return try ast.makeVarDecl(self.allocator, ty, array_size, name, vinit, typeToken.line, typeToken.column);
     }
     fn parseExpression(self: *Self) ParserErrors!*Expr {
-        return self.parseEquality();
+        return self.parseBitWiseLogicalOr();
+    }
+    fn parseBitWiseLogicalOr(self: *Self) ParserErrors!*Expr {
+        var left = try self.parseBitWiseLogicalAnd();
+        while (getTag(self.peek()) == .logical_or) {
+            const operator = self.advance();
+            const right = try self.parseBitWiseLogicalAnd();
+            left = try ast.makeBinary(self.allocator, getTag(operator), left, right, operator.line, operator.column);
+        }
+        return left;
+    }
+    fn parseBitWiseLogicalAnd(self: *Self) ParserErrors!*Expr {
+        var left = try self.parseBitWiseOr();
+        while (getTag(self.peek()) == .logical_and) {
+            const operator = self.advance();
+            const right = try self.parseBitWiseOr();
+            left = try ast.makeBinary(self.allocator, getTag(operator), left, right, operator.line, operator.column);
+        }
+        return left;
+    }
+    fn parseBitWiseOr(self: *Self) ParserErrors!*Expr {
+        var left = try self.parseBitWiseXor();
+        while (getTag(self.peek()) == .or_) {
+            const operator = self.advance();
+            const right = try self.parseBitWiseXor();
+            left = try ast.makeBinary(self.allocator, getTag(operator), left, right, operator.line, operator.column);
+        }
+        return left;
+    }
+    fn parseBitWiseXor(self: *Self) ParserErrors!*Expr {
+        var left = try self.parseBitWiseAnd();
+        while (getTag(self.peek()) == .xor_) {
+            const operator = self.advance();
+            const right = try self.parseBitWiseAnd();
+            left = try ast.makeBinary(self.allocator, getTag(operator), left, right, operator.line, operator.column);
+        }
+        return left;
+    }
+    fn parseBitWiseAnd(self: *Self) ParserErrors!*Expr {
+        var left = try self.parseEquality();
+        while (getTag(self.peek()) == .and_) {
+            const operator = self.advance();
+            const right = try self.parseEquality();
+            left = try ast.makeBinary(self.allocator, getTag(operator), left, right, operator.line, operator.column);
+        }
+        return left;
     }
     fn parseEquality(self: *Self) ParserErrors!*Expr {
         var left = try self.parseComparison();
@@ -266,12 +311,23 @@ pub const Parser = struct {
         return left;
     }
     fn parseComparison(self: *Self) ParserErrors!*Expr {
-        var left = try self.parseTerm();
+        var left = try self.parseShift();
 
         while (getTag(self.peek()) == .lessthan or getTag(self.peek()) == .lessthan_equal or getTag(self.peek()) == .greaterthan or getTag(self.peek()) == .greaterthan_equal) {
             const operator = self.advance();
-            const right = try self.parseTerm();
+            const right = try self.parseShift();
             left = try ast.makeBinary(self.allocator, getTag(operator), left, right, operator.line, operator.column); //chk line column pa//rameters
+        }
+
+        return left;
+    }
+    fn parseShift(self: *Self) ParserErrors!*Expr {
+        var left = try self.parseTerm();
+
+        while (getTag(self.peek()) == .left_shift or getTag(self.peek()) == .right_shift) {
+            const operator = self.advance();
+            const right = try self.parseTerm();
+            left = try ast.makeBinary(self.allocator, getTag(operator), left, right, operator.line, operator.column);
         }
 
         return left;
@@ -337,7 +393,7 @@ pub const Parser = struct {
     }
     fn parseUnary(self: *Self) ParserErrors!*Expr {
         const tag = getTag(self.peek());
-        if (tag == .minus or tag == .plus) {
+        if (tag == .minus or tag == .plus or tag == .not) {
             const op = self.advance();
             const operand = try self.parseUnary();
             return ast.makeUnary(
