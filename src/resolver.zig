@@ -51,7 +51,7 @@ fn resolveFile(state: *ResolveState, path: []const u8) !void {
         try resolveFile(state, import_path);
     }
 
-    try state.loaded.append(state.allocator, .{ .path = path, .program = program }); // only this one
+    try state.loaded.append(state.allocator, .{ .path = path, .program = program });
     _ = state.stack.remove(path);
 }
 pub fn merge(allocator: std.mem.Allocator, files: []const LoadedFile) !*ast.Stmt {
