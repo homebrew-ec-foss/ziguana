@@ -12,3 +12,4 @@ zig-out
 build.zig.zon
 exampleprog
 .vscode/
+ziguana_temp.c
