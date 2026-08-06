@@ -5,6 +5,7 @@ const lexer = @import("lexer");
 const Token = lexer.Token;
 const TokenTag = lexer.TokenTag;
 const TokenPayload = lexer.TokenPayload;
+const TypeKind = lexer.TypeKind;
 
 const Stmt = ast.Stmt;
 const Param = ast.Param;
@@ -96,9 +97,13 @@ pub const Parser = struct {
         var stmts = std.ArrayList(*Stmt).empty;
 
         while (!self.isAtEnd()) {
-            if (getTag(self.peek()) == .func) {
+            if (getTag(self.peek()) == .struct_) {
+                try stmts.append(self.allocator, try self.parseStructDecl());
+            } 
+            else if (getTag(self.peek()) == .func) {
                 try stmts.append(self.allocator, try self.parseFunction());
-            } else {
+            } 
+            else {
                 try stmts.append(self.allocator, try self.parseStatement());
             }
         }
@@ -163,7 +168,8 @@ pub const Parser = struct {
                 const after = self.peekNext();
                 break :blk switch (getTag(after)) {
                     .lparen => self.parseCallStatement(),
-                    .lbracket, .equal, .plus_equal, .minus_equal => self.parseAssignment(),
+                    .lbracket, .equal, .plus_equal, .minus_equal, .dot => self.parseAssignment(),
+                    .identifier => self.parseVarDecl(),
                     else => error.UnexpectedToken,
                 };
             },
@@ -229,8 +235,20 @@ pub const Parser = struct {
         };
     }
     fn parseVarDecl(self: *Self) !*Stmt {
-        const typeToken = try self.consume(.type_);
-        const ty = typeToken.payload.type_;
+        const typeToken = self.advance();
+        var ty: lexer.TypeKind = .Int;
+        var custom_type: ?[]const u8 = null;
+
+        if (getTag(typeToken) == .type_) {
+            ty = typeToken.payload.type_;
+        } 
+        else if (getTag(typeToken) == .identifier) {
+            ty = .custom;
+            custom_type = typeToken.payload.identifier;
+        } 
+        else {
+            return error.ExpectedType;
+        }
 
         var array_size: ?usize = null;
         if (getTag(self.peek()) == .lbracket) {
@@ -251,7 +269,7 @@ pub const Parser = struct {
 
         _ = try self.consume(.semicolon);
 
-        return try ast.makeVarDecl(self.allocator, ty, array_size, name, vinit, typeToken.line, typeToken.column);
+        return try ast.makeVarDecl(self.allocator, ty, custom_type, array_size, name, vinit, typeToken.line, typeToken.column);
     }
     fn parseExpression(self: *Self) ParserErrors!*Expr {
         return self.parseEquality();
@@ -317,10 +335,18 @@ pub const Parser = struct {
                 if (getTag(self.peekNext()) == .lbracket) {
                     return self.parseArrayAccess();
                 }
-
+            
                 token = self.advance();
-                return try ast.makeVariable(self.allocator, token.payload.identifier, token.line, token.column);
+                var expr = try ast.makeVariable(self.allocator, token.payload.identifier, token.line, token.column);
+            
+                while (getTag(self.peek()) == .dot) {
+                    _ = try self.consume(.dot);
+                    const fieldTok = try self.consume(.identifier);
+                    expr = try ast.makeMemberAccess(self.allocator, expr, fieldTok.payload.identifier, fieldTok.line, fieldTok.column);
+                }
+                return expr;
             },
+
             .lparen => {
                 _ = self.advance();
                 const expression = try self.parseExpression();
@@ -354,10 +380,16 @@ pub const Parser = struct {
         const nameToken = try self.consume(.identifier);
         const name = nameToken.payload.identifier;
         var index: ?*Expr = null;
+        var field: ?[]const u8 = null;
         if (getTag(self.peek()) == .lbracket) {
             _ = try self.consume(.lbracket);
             index = try self.parseExpression();
             _ = try self.consume(.rbracket);
+        }
+        else if (getTag(self.peek()) == .dot) {
+            _ = try self.consume(.dot);
+            const fieldTok = try self.consume(.identifier);
+            field = fieldTok.payload.identifier;
         }
         const opToken = self.advance();
         const op = getTag(opToken);
@@ -366,7 +398,7 @@ pub const Parser = struct {
         }
         const value = try self.parseExpression();
         _ = try self.consume(.semicolon);
-        return ast.makeAssignment(self.allocator, name, index, op, value, nameToken.line, nameToken.column);
+        return ast.makeAssignment(self.allocator, name, field, index, op, value, nameToken.line, nameToken.column);
     }
 
     fn parseCallStatement(self: *Self) ParserErrors!*Stmt {
@@ -453,6 +485,57 @@ pub const Parser = struct {
         }
         return ast.makeInterpolatedString(self.allocator, try parts.toOwnedSlice(self.allocator), startToken.line, startToken.column);
     }
+
+    fn parseStructDecl(self: *Self) !*Stmt {
+        const structTok = try self.consume(.struct_);
+        const nameTok = try self.consume(.identifier);
+        const struct_name = nameTok.payload.identifier;
+
+        _ = try self.consume(.lbrace);
+        var fields = std.ArrayList(ast.Field).empty;
+
+        while (getTag(self.peek()) != .rbrace and !self.isAtEnd()) {
+            const typeToken = self.advance();
+            var ty: TypeKind = .Int;
+            var custom_type: ?[]const u8 = null;
+
+            if (getTag(typeToken) == .type_) {
+                ty = typeToken.payload.type_;
+            } 
+            else if (getTag(typeToken) == .identifier) {
+                ty = .custom;
+                custom_type = typeToken.payload.identifier;
+            } 
+            else {
+                return error.ExpectedType;
+            }
+
+            const fieldNameTok = try self.consume(.identifier);
+            _ = try self.consume(.semicolon);
+
+            try fields.append(self.allocator, .{
+                .ty = ty,
+                .type_name = custom_type,
+                .name = fieldNameTok.payload.identifier,
+                .line = typeToken.line,
+                .column = typeToken.column,
+            });
+        }
+
+        _ = try self.consume(.rbrace);
+        if (getTag(self.peek()) == .semicolon) {
+            _ = self.advance(); // optional semicolon after struct decl
+        }
+
+        return ast.makeStructDecl(
+            self.allocator,
+            struct_name,
+            try fields.toOwnedSlice(self.allocator),
+            structTok.line,
+            structTok.column,
+        );
+    }   
+
 
     pub fn parse(self: *Self) ParserErrors!*Stmt {
         return try self.parseProgram();

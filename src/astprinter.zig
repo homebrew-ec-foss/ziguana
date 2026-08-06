@@ -160,6 +160,11 @@ pub const Printer = struct {
                 try self.printExpression(expr);
                 self.removeLevel();
             },
+            .struct_decl => |s| {
+                try self.printIndent();
+                try self.printPrefix();
+                std.debug.print("StructDecl {s}\n", .{s.name});
+            },
         }
     }
 
@@ -245,6 +250,14 @@ pub const Printer = struct {
                 }
                 self.removeLevel();
             },
+            .member_access => |m| {
+                try self.printIndent();
+                try self.printPrefix();
+                std.debug.print("MemberAccess .{s}\n", .{m.field});
+                self.addLevel();
+                try self.printExpression(m.object);
+                self.removeLevel();
+            },
         }
     }
     fn printParameters(self: *Printer, params: []const ast.Param) !void {
@@ -302,6 +315,7 @@ pub const Printer = struct {
             .Bool => "Bool",
             .String => "String", //todo: need to add an invalid type after tanishk's pr gets merged
             .void_ => "void",
+            .custom => "custom",
         };
     }
 };
