@@ -129,6 +129,19 @@ pub const Checker = struct {
                 if (v.init) |init_val| {
                     switch (init_val) {
                         .expr => |ex| {
+                            if (ex.* == .interpolated_string) {
+                                const is = ex.interpolated_string;
+                                var has_expr = false;
+                                for (is.parts) |part| {
+                                    if (part == .expr) {
+                                        has_expr = true;
+                                        break;
+                                    }
+                                }
+                                if (has_expr) {
+                                    try self.addError(v.line, v.column, "interpolated string with expressions cannot be assigned to '{s}'", .{v.name});
+                                }
+                            }
                             const ety = try self.checkExpr(ex);
                             if (ety != v.ty) {
                                 try self.addError(
