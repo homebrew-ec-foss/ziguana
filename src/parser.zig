@@ -96,6 +96,9 @@ pub const Parser = struct {
         var stmts = std.ArrayList(*Stmt).empty;
 
         while (!self.isAtEnd()) {
+            if (getTag(self.peek()) == .import_) {
+                try stmts.append(self.allocator, try self.parseImport());
+            }
             if (getTag(self.peek()) == .func) {
                 try stmts.append(self.allocator, try self.parseFunction());
             } else {
@@ -508,6 +511,13 @@ pub const Parser = struct {
             }
         }
         return ast.makeInterpolatedString(self.allocator, try parts.toOwnedSlice(self.allocator), startToken.line, startToken.column);
+    }
+
+    fn parseImport(self: *Self) ParserErrors!*Stmt {
+        const importTok = try self.consume(.import_);
+        const path = importTok.payload.import_;
+        _ = try self.consume(.semicolon);
+        return try ast.makeImportDecl(self.allocator, path, importTok.line, importTok.column);
     }
 
     pub fn parse(self: *Self) ParserErrors!*Stmt {

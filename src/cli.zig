@@ -15,23 +15,23 @@ pub const Arguments = struct {
 pub fn parseArgs(init: std.process.Init) !Arguments {
     const banner =
         \\_________ ___
-        \\\$$$$$$$$\\$$\                                                
-        \\ \____$$  |\__|                                                
-        \\     $$  / $$\ $$$$$$\  $$\   $$\ $$$$$$\  $$$$$$$\   $$$$$$\  
-        \\    $$  /  $$ |$$  __$$\ $$ |  $$ | \____$$\ $$  __$$\ \____$$\ 
+        \\\$$$$$$$$\\$$\
+        \\ \____$$  |\__|
+        \\     $$  / $$\ $$$$$$\  $$\   $$\ $$$$$$\  $$$$$$$\   $$$$$$\
+        \\    $$  /  $$ |$$  __$$\ $$ |  $$ | \____$$\ $$  __$$\ \____$$\
         \\   $$  /   $$ |$$ /  $$ |$$ |  $$ | $$$$$$$ |$$ |  $$ | $$$$$$$ |
         \\  $$  /    $$ |$$ |  $$ |$$ |  $$ |$$  __$$ |$$ |  $$ |$$  __$$ |
         \\ $$$$$$$$\ $$ |\$$$$$$$ |\$$$$$$  |\$$$$$$$ |$$ |  $$ |\$$$$$$$ |
         \\ \________|\__| \____$$ | \______/  \_______|\__|  \__| \_______|
-        \\               $$\   $$ |                                      
-        \\               \$$$$$$  |                                      
-        \\                \______/                                       
+        \\               $$\   $$ |
+        \\               \$$$$$$  |
+        \\                \______/
         \\
         \\ Ziguana
         \\ 1) --version  : Shows ziguana Version
         \\ 2) --help     : Shows the available flags
         \\ 1) --tokens   : Prints lexed tokens from the source file
-        \\ 2) --astprint : Print abstract syntax tree parsed from source file 
+        \\ 2) --astprint : Print abstract syntax tree parsed from source file
         \\ 3) --check    : Prints Syntax errors from the source file
         \\ 4) --emit-c   : Emit generated C source
         \\ 5) -o         : Generate output file
@@ -65,11 +65,11 @@ pub fn parseArgs(init: std.process.Init) !Arguments {
                 return error.ExpectedExecutableFilename;
             }
             arguments.executable = args[i];
+        } else if (std.mem.eql(u8, arg, "--check")) { //cn be changed later
+            arguments.print_checks = true;
         } else if (!pathSet) {
             arguments.path = arg;
             pathSet = true;
-        } else if (std.mem.eql(u8, arg, "--check")) { //cn be changed later
-            arguments.print_checks = true;
         }
         i += 1;
     }

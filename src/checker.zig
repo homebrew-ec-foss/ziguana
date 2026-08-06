@@ -11,6 +11,11 @@ pub const CheckErr = struct {
     message: []const u8,
 };
 
+pub const FileUnit = struct {
+    path: []const u8,
+    program: *const Stmt,
+};
+
 const FuncSig = struct {
     return_type: TypeKind,
     param_types: []const TypeKind,
@@ -29,6 +34,7 @@ pub const Checker = struct {
     scopes: std.ArrayList(Scope),
     errors: std.ArrayList(CheckErr),
     current_return_type: ?TypeKind = null,
+    current_file: []const u8 = "",
 
     const Self = @This();
 
@@ -42,7 +48,9 @@ pub const Checker = struct {
     }
 
     fn addError(self: *Self, line: usize, column: usize, comptime fmt: []const u8, args: anytype) !void {
-        const msg = try std.fmt.allocPrint(self.allocator, "{d}:{d}: " ++ fmt, .{ line, column } ++ args);
+        // const msg = try std.fmt.allocPrint(self.allocator, "{d}:{d}: " ++ fmt, .{ line, column } ++ args);
+        // try self.errors.append(self.allocator, .{ .message = msg });
+        const msg = try std.fmt.allocPrint(self.allocator, "{s}:{d}:{d}: " ++ fmt, .{ self.current_file, line, column } ++ args);
         try self.errors.append(self.allocator, .{ .message = msg });
     }
 
@@ -91,32 +99,32 @@ pub const Checker = struct {
         };
     }
 
-    pub fn collectFunctions(self: *Self, top_level: []const *Stmt) !void {
+    pub fn collectFunctions(self: *Self, path: []const u8, top_level: []const *Stmt) !void {
+        self.current_file = path; // so a redeclaration error here is tagged correctly
         for (top_level) |stmt| {
             if (stmt.* != .func_decl) continue;
             const f = stmt.func_decl;
-
             if (self.functions.contains(f.name)) {
                 try self.addError(f.line, f.column, "redeclaration of function '{s}'", .{f.name});
                 continue;
             }
-
             const param_types = try self.allocator.alloc(TypeKind, f.params.len);
             for (f.params, 0..) |p, i| param_types[i] = p.ty;
-
-            try self.functions.put(f.name, .{
-                .return_type = f.return_type,
-                .param_types = param_types,
-            });
+            try self.functions.put(f.name, .{ .return_type = f.return_type, .param_types = param_types });
         }
     }
 
-    pub fn check(self: *Self, program: *const Stmt) !void {
-        std.debug.assert(program.* == .program);
-        try self.collectFunctions(program.program);
+    pub fn check(self: *Self, files: []const FileUnit) !void {
+        for (files) |file| {
+            std.debug.assert(file.program.* == .program);
+            try self.collectFunctions(file.path, file.program.program);
+        }
 
         try self.pushScope();
-        for (program.program) |stmt| try self.checkStmt(stmt);
+        for (files) |file| {
+            self.current_file = file.path;
+            for (file.program.program) |stmt| try self.checkStmt(stmt);
+        }
         self.popScope();
     }
 
@@ -225,6 +233,7 @@ pub const Checker = struct {
 
                 self.current_return_type = prev_return;
             },
+            .import_decl => {}, // will fix it later
 
             .if_stmt => |i| {
                 const cty = try self.checkExpr(i.condition);

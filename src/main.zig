@@ -4,6 +4,7 @@ const fetcher = @import("fetcher");
 const parser = @import("parser");
 const cli = @import("cli");
 const astprinter = @import("astprinter");
+const resolver = @import("resolver");
 const codegen = @import("codegen");
 fn printToken(tok: lexerMod.Token) void {
     switch (tok.payload) {
@@ -23,36 +24,38 @@ pub fn main(init: std.process.Init) !void {
         return;
     }
 
-    const source = try fetcher.readSource(io, arena, args.path);
-
-    var lex = lexerMod.Lexer.init(source);
-    const tokens = try lex.lex(arena);
-
-    if (args.token_print) {
-        for (tokens.items) |tok| {
-            printToken(tok);
-        }
-    }
-
-    var p = parser.Parser.init(arena, tokens.items);
-    const program = p.parse() catch |err| {
-        if (p.errors.items.len > 0) {
-            for (p.errors.items) |e| {
-                std.debug.print("error: {s}\n", .{e.message});
-            }
-        } else {
-            std.debug.print("error: parsing failed ({s})\n", .{@errorName(err)});
-        }
+    // const source = try fetcher.readSource(io, arena, args.path);
+    //
+    // var lex = lexerMod.Lexer.init(source);
+    // const tokens = try lex.lex(arena);
+    //
+    // if (args.token_print) {
+    //     for (tokens.items) |tok| {
+    //         printToken(tok);
+    //     }
+    // }
+    //
+    // var p = parser.Parser.init(arena, tokens.items);
+    // const program = p.parse() catch |err| {
+    //     if (p.errors.items.len > 0) {
+    //         for (p.errors.items) |e| {
+    //             std.debug.print("error: {s}\n", .{e.message});
+    //         }
+    //     } else {
+    //         std.debug.print("error: parsing failed ({s})\n", .{@errorName(err)});
+    //     }
+    //     std.process.exit(1);
+    // };
+    //
+    const files = resolver.resolve(io, arena, args.path) catch {
         std.process.exit(1);
     };
 
-    if (args.ast_print) {
-        var printer = astprinter.Printer.init();
-        try printer.printAst(program);
-    }
-
+    const checker_mod = @import("checker");
+    const check_units = try arena.alloc(checker_mod.FileUnit, files.len);
+    for (files, 0..) |f, i| check_units[i] = .{ .path = f.path, .program = f.program };
     var checker = @import("checker").Checker.init(arena);
-    try checker.check(program);
+    try checker.check(check_units);
 
     if (checker.errors.items.len > 0) {
         if (args.print_checks) {
@@ -64,7 +67,11 @@ pub fn main(init: std.process.Init) !void {
     } else if (args.print_checks) {
         std.debug.print("No Errors\n", .{});
     }
-
+    const program = try resolver.merge(arena, files);
+    if (args.ast_print) {
+        var printer = astprinter.Printer.init();
+        try printer.printAst(program);
+    }
     const c_file = if (args.emit_c)
         args.output_c
     else

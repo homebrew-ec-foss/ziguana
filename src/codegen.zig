@@ -192,6 +192,7 @@ pub const CodeGen = struct {
                 }
                 try self.write(";\n");
             },
+            .import_decl => unreachable,
             .block => |stmts| {
                 try self.writeIndent();
                 try self.write("{\n");

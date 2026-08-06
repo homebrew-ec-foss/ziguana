@@ -67,6 +67,7 @@ pub const TokenTag = enum {
     right_shift,
     logical_and,
     logical_or,
+    import_, // import decl
 };
 
 pub const TokenPayload = union(TokenTag) {
@@ -123,6 +124,7 @@ pub const TokenPayload = union(TokenTag) {
     right_shift: void,
     logical_and: void,
     logical_or: void,
+    import_: []const u8,
 };
 
 pub const Token = struct {
@@ -273,6 +275,23 @@ pub const Lexer = struct {
             return payload;
         }
         return .{ .identifier = word };
+    }
+
+    pub fn readImportPath(self: *Lexer) ?[]const u8 {
+        self.skipWhiteSpace();
+        if (self.ch != '"') {
+            return "";
+        }
+        self.readChar();
+        const start: usize = self.position;
+        while (self.ch != '"' and self.ch != 0 and self.ch != '\n') {
+            self.readChar();
+        }
+        const path = self.input[start..self.position];
+        if (self.ch == '"') {
+            self.readChar();
+        }
+        return path;
     }
 
     // main token loop function -
@@ -502,6 +521,12 @@ pub const Lexer = struct {
         }
         if (std.ascii.isAlphabetic(self.ch)) {
             const wordValue: []const u8 = self.readIdentifier();
+            if (std.mem.eql(u8, wordValue, "import")) {
+                if (self.readImportPath()) |path| {
+                    return Token{ .payload = .{ .import_ = path }, .line = start_line, .column = start_col };
+                }
+                return Token{ .payload = .{ .invalid = "expected a quoted path" }, .line = start_line, .column = start_col };
+            }
             const keyword_payload = lookUpKeyword(wordValue);
             return Token{ .payload = keyword_payload, .line = start_line, .column = start_col };
         }

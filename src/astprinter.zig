@@ -53,6 +53,11 @@ pub const Printer = struct {
                 try self.printStatement(func.body);
                 self.removeLevel();
             },
+            .import_decl => |imp| {
+                try self.printIndent();
+                try self.printPrefix();
+                std.debug.print("Import \"{s}\"\n", .{imp.path});
+            },
 
             .var_decl => |decl| {
                 try self.printIndent();

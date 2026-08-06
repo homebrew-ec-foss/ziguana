@@ -133,6 +133,12 @@ pub const Stmt = union(enum) {
         column: usize,
     },
 
+    import_decl: struct {
+        path: []const u8,
+        line: usize,
+        column: usize,
+    },
+
     block: []*Stmt,
     expr_stmt: *Expr,
     program: []*Stmt,
@@ -229,5 +235,11 @@ pub fn makeUnary(a: std.mem.Allocator, op: TokenTag, operand: *Expr, line: usize
 pub fn makeInterpolatedString(a: std.mem.Allocator, parts: []InterpPart, line: usize, column: usize) !*Expr {
     const node = try a.create(Expr);
     node.* = .{ .interpolated_string = .{ .parts = parts, .line = line, .column = column } };
+    return node;
+}
+
+pub fn makeImportDecl(a: std.mem.Allocator, path: []const u8, line: usize, column: usize) !*Stmt {
+    const node = try a.create(Stmt);
+    node.* = .{ .import_decl = .{ .path = path, .line = line, .column = column } };
     return node;
 }
