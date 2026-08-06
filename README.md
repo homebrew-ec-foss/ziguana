@@ -8,7 +8,7 @@ A toy programming language and transpiler, written in Zig. Ziguana source files 
 ## Try it in 60 seconds
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/homebrew-ec-foss/ziguana.git
 cd ziguana
 zig build
 
