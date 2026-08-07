@@ -55,13 +55,11 @@ pub fn main(init: std.process.Init) !void {
     try checker.check(program);
 
     if (checker.errors.items.len > 0) {
-        if (args.print_checks) {
-            for (checker.errors.items) |err| {
-                std.debug.print("error: {s}\n", .{err.message});
-            }
+        for (checker.errors.items) |err| {
+            std.debug.print("error: {s}\n", .{err.message});
         }
         std.process.exit(1);
-    } else if (args.print_checks) {
+    } else if (checker.errors.items.len == 0 and args.print_checks) {
         std.debug.print("No Errors\n", .{});
     }
 
