@@ -6,6 +6,7 @@ pub const TypeKind = enum {
     Bool, //B is in Upper-case
     String,
     void_, //fix later
+
 };
 
 pub const lexerMode = enum { //String interpolation using state mode
@@ -180,7 +181,7 @@ pub const Lexer = struct {
     pub fn readString(self: *Lexer) []const u8 {
         const start: usize = self.position;
 
-        while (self.ch != '"' and self.ch != 0 and self.ch != '{') {
+        while (self.ch != '"' and self.ch != 0) {
             if (self.ch == '\n') {
                 self.string_error = "Newline in string literal";
                 self.string_error_line = self.line;
@@ -194,7 +195,7 @@ pub const Lexer = struct {
                 return self.input[start..self.position];
             }
 
-            if (self.ch == '\\') { //patch-below lines are commented so `\x`is valid
+            if (self.ch == '\\') { //patch-below lines are commented so `\x` is valid
                 // const esc_line = self.line;
                 // const esc_col = self.column;
 
@@ -205,6 +206,13 @@ pub const Lexer = struct {
                 //self.string_error_line = esc_line;
                 //self.string_error_column = esc_col;
 
+                if (self.ch == '{' or self.ch == '}' or self.ch == 'n' or self.ch == 't' or self.ch == 'r' or self.ch == '"' or self.ch == '\\') {
+                    if (self.ch != 0) {
+                        self.readChar();
+                    }
+                    continue;
+                }
+
                 if (self.ch != 0) {
                     self.readChar();
                 }
@@ -212,6 +220,9 @@ pub const Lexer = struct {
 
                 //self.mode = lexerMode.normal_state;
                 //return self.input[start..self.position];
+            }
+            if (self.ch == '{') {
+                break;
             }
             self.readChar();
         }
