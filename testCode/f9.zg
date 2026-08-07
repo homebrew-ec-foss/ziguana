@@ -3,6 +3,6 @@ fn int main(){
   {
     int b=90;
   }
-  print("b is {b}");
+                                                            print("b is {pro()}");
   return 6769;
 }

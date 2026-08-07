@@ -44,10 +44,17 @@ fn printCaret(source: []const u8, line: usize, column: usize) void {
     var i: usize = 0;
     while (i < prefix.len) : (i += 1) std.debug.print(" ", .{});
     i = 1;
-    while (i < column) : (i += 1) std.debug.print(" ", .{});
+    while (i < column and i - 1 < line_content.len) : (i += 1) {
+        //std.debug.print("^\n", .{});
+        const c = line_content[i - 1];
+        if (c == '\t') {
+            std.debug.print("\t", .{});
+        } else {
+            std.debug.print(" ", .{});
+        }
+    }
     std.debug.print("^\n", .{});
 }
-
 pub fn main(init: std.process.Init) !void {
     const arena = init.arena.allocator();
     const io = init.io;
