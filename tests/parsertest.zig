@@ -434,6 +434,15 @@ test "array literal with expressions" {
     try expectEqual(.binary, tag(init.array_literal[1].*));
     try expectEqual(.call, tag(init.array_literal[2].*));
 }
+test "auto declaration with init" {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+    const tree = try lexnparse(arena.allocator(), "auto x = 42;");
+    const stmt = tree.program[0];
+    try expectEqual(.var_decl, tag(stmt.*));
+    try expectEqual(.Auto, stmt.var_decl.ty);
+    try expectEqualStrings(stmt.var_decl.name, "x");
+}
 //negative tests (only these ones are in the scope for parser error handling i.e. simple syntax errors, others like type checking for example will be in checker tests)
 test "missing semicolon in variable declaration" {
     var arena = std.heap.ArenaAllocator.init(alloc);
