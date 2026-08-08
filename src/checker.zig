@@ -9,6 +9,8 @@ const TokenTag = lexer.TokenTag;
 
 pub const CheckErr = struct {
     message: []const u8,
+    line: usize,
+    column: usize,
 };
 
 const FuncSig = struct {
@@ -43,7 +45,7 @@ pub const Checker = struct {
 
     fn addError(self: *Self, line: usize, column: usize, comptime fmt: []const u8, args: anytype) !void {
         const msg = try std.fmt.allocPrint(self.allocator, "{d}:{d}: " ++ fmt, .{ line, column } ++ args);
-        try self.errors.append(self.allocator, .{ .message = msg });
+        try self.errors.append(self.allocator, .{ .message = msg, .line = line, .column = column });
     }
 
     fn pushScope(self: *Self) !void {

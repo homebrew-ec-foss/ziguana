@@ -1,0 +1,6 @@
+fn int func(){
+  int var1=10;
+  var1+=12;
+  print("var is {var1}");
+  return 10;
+}

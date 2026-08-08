@@ -6,6 +6,7 @@ pub const TypeKind = enum {
     Bool, //B is in Upper-case
     String,
     void_, //fix later
+
     Auto,
 };
 
