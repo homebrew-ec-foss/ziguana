@@ -1,3 +1,6 @@
 fn int main(){
-             printf("{tuff()}");
+    auto x = 10;
+    auto s = "hello";
+    auto b = true;
+    return 0;
 }

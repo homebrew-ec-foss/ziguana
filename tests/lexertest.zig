@@ -167,6 +167,15 @@ test "keyword string" {
     try std.testing.expectEqual(lexer.TypeKind.String, tokens.items[0].payload.type_);
     try std.testing.expect(tokens.items[1].payload == .eof);
 }
+test "keyword auto" {
+    var l = Lexer.init("auto");
+    var tokens = try l.lex(alloc);
+    defer tokens.deinit(alloc);
+    try std.testing.expectEqual(@as(usize, 2), tokens.items.len);
+    try std.testing.expect(tokens.items[0].payload == .type_);
+    try std.testing.expectEqual(lexer.TypeKind.Auto, tokens.items[0].payload.type_);
+    try std.testing.expect(tokens.items[1].payload == .eof);
+}
 test "keyword fn" {
     var l = Lexer.init("fn");
     var tokens = try l.lex(alloc);
