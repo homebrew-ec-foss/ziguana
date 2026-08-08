@@ -6,7 +6,6 @@ pub const TypeKind = enum {
     Bool, //B is in Upper-case
     String,
     void_, //fix later
-    Auto,
 };
 
 pub const lexerMode = enum { //String interpolation using state mode
@@ -243,7 +242,6 @@ pub const Lexer = struct {
                 .{ "int", TokenPayload{ .type_ = .Int } },
                 .{ "bool", TokenPayload{ .type_ = .Bool } },
                 .{ "string", TokenPayload{ .type_ = .String } },
-                .{ "auto", TokenPayload{ .type_ = .Auto } },
                 .{ "if", TokenPayload{ .if_ = {} } },
                 .{ "else", TokenPayload{ .else_ = {} } },
                 .{ "while", TokenPayload{ .while_ = {} } },
