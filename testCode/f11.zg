@@ -1,5 +1,5 @@
 fn int main(){
     auto x = 10;
-    auto s = "hlo;
+    auto s = "hlo";
     return 0;
 }
