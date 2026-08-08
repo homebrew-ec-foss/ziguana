@@ -1,6 +1,5 @@
 fn int main(){
     auto x = 10;
-    auto s = "hello";
-    auto b = true;
+    auto s = "hlo;
     return 0;
 }
